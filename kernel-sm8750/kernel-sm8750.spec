@@ -113,7 +113,7 @@ done
 /boot/System.map-%{KERNEL_RELEASE}
 /boot/config-%{KERNEL_RELEASE}
 /usr/lib/modules/%{KERNEL_RELEASE}
-/usr/lib/linux-image/%{KERNEL_RELEASE}
+/usr/lib/linux-image-%{KERNEL_RELEASE}
 
 %posttrans
 release=%{KERNEL_RELEASE}

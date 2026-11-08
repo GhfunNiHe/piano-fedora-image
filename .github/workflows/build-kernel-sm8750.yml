@@ -7,15 +7,19 @@ on:
       - "kernel-sm8750/**"
       - ".github/workflows/build-kernel-sm8750.yml"
 
+concurrency:
+  group: build-kernel-sm8750-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   build:
-    name: kernel-sm8750 (Fedora 44 aarch64)
+    name: kernel-sm8750 (Fedora latest aarch64)
     runs-on: ubuntu-24.04-arm
     container:
-      image: fedora:44
+      image: fedora:latest
       options: --user 0
     timeout-minutes: 360
     env:
@@ -36,13 +40,13 @@ jobs:
           mkdir -p "$HOME/rpmbuild/tmp"
 
       - name: Restore ccache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v6
         with:
           path: ~/.ccache
-          key: kernel-sm8750-ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+          key: ccache-piano-sm8750-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
           restore-keys: |
-            kernel-sm8750-ccache-${{ runner.os }}-${{ runner.arch }}-
-            kernel-sm8750-ccache-
+            ccache-piano-sm8750-${{ runner.os }}-${{ runner.arch }}-
+            ccache-piano-sm8750-
 
       - name: Stage local kernel inputs
         run: |
@@ -67,9 +71,22 @@ jobs:
         run: |
           set -euxo pipefail
           export CCACHE_DIR="$HOME/.ccache"
+          mkdir -p "$CCACHE_DIR"
           TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
             --define "_topdir $HOME/rpmbuild" \
             kernel-sm8750/kernel-sm8750.spec
+
+      - name: Show ccache statistics
+        if: always()
+        run: |
+          ccache --show-stats || true
+
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.ccache
+          key: ccache-piano-sm8750-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
 
       - name: Show package results
         run: |
@@ -77,7 +94,7 @@ jobs:
           find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" -type f -printf '%p %s bytes\n' | sort
 
       - name: Upload RPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kernel-sm8750-rpms
           path: ~/rpmbuild/RPMS/**/*.rpm
@@ -85,9 +102,45 @@ jobs:
           retention-days: 14
 
       - name: Upload SRPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kernel-sm8750-srpms
           path: ~/rpmbuild/SRPMS/*.src.rpm
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Create Kernel Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get short commit SHA
+        run: echo "SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_ENV"
+
+      - name: Download RPMs
+        uses: actions/download-artifact@v8
+        with:
+          name: kernel-sm8750-rpms
+          path: rpms
+
+      - name: Download SRPMs
+        uses: actions/download-artifact@v8
+        with:
+          name: kernel-sm8750-srpms
+          path: srpms
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: kernel-sm8750-${{ env.SHORT_SHA }}
+          name: Kernel sm8750 (${{ env.SHORT_SHA }})
+          files: |
+            rpms/**/*.rpm
+            srpms/**/*.src.rpm
+          fail_on_unmatched_files: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
