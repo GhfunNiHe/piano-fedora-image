@@ -168,20 +168,12 @@ jobs:
           name: piano-rpms
           path: rpms
 
-      - name: Download SRPMs
-        uses: actions/download-artifact@v4
-        with:
-          name: piano-srpms
-          path: srpms
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: piano-${{ env.SHORT_SHA }}
           name: Piano Packages (${{ env.SHORT_SHA }})
-          files: |
-            rpms/**/*.rpm
-            srpms/**/*.src.rpm
+          files: rpms/**/*.rpm
           fail_on_unmatched_files: true
           draft: false
         env:

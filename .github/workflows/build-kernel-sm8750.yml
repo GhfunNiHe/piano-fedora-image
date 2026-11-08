@@ -126,20 +126,12 @@ jobs:
           name: kernel-sm8750-rpms
           path: rpms
 
-      - name: Download SRPMs
-        uses: actions/download-artifact@v8
-        with:
-          name: kernel-sm8750-srpms
-          path: srpms
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: kernel-sm8750-${{ env.SHORT_SHA }}
           name: Kernel sm8750 (${{ env.SHORT_SHA }})
-          files: |
-            rpms/**/*.rpm
-            srpms/**/*.src.rpm
+          files: rpms/**/*.rpm
           fail_on_unmatched_files: true
           draft: false
         env:
