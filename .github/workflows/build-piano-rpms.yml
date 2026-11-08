@@ -17,10 +17,10 @@ env:
 
 jobs:
   build:
-    name: Build RPMs
+    name: Build RPMs (Fedora latest aarch64)
     runs-on: ubuntu-24.04-arm
     container:
-      image: fedora:44
+      image: fedora:latest
       options: --user 0
     timeout-minutes: 60
 
@@ -143,3 +143,39 @@ jobs:
           path: ~/rpmbuild/SRPMS/**/*.src.rpm
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Get short commit SHA
+        run: echo "SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_ENV"
+
+      - name: Download RPMs
+        uses: actions/download-artifact@v4
+        with:
+          name: piano-rpms
+          path: rpms
+
+      - name: Download SRPMs
+        uses: actions/download-artifact@v4
+        with:
+          name: piano-srpms
+          path: srpms
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: piano-${{ env.SHORT_SHA }}
+          name: Piano Packages (${{ env.SHORT_SHA }})
+          files: |
+            rpms/**/*.rpm
+            srpms/**/*.src.rpm
+          fail_on_unmatched_files: true
+          draft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

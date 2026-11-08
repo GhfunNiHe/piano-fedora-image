@@ -44,7 +44,7 @@ future transition does not silently lose firmware dependencies.
 
 The package set is built by
 [`.github/workflows/build-piano-rpms.yml`](.github/workflows/build-piano-rpms.yml)
-on GitHub's ARM64 runner in a Fedora 44 container. The workflow downloads the
+on GitHub's ARM64 runner in a `fedora:latest` container. The workflow downloads the
 pinned v1.1.0 packages zip, extracts the main and virtualization deb payloads,
 stages the local `piano-device-support`/`piano-sensors` files, installs
 `BuildRequires`, and invokes `rpmbuild` for each spec.
@@ -134,7 +134,7 @@ full kernel compilation.
 
 The kernel template is built by
 [`.github/workflows/build-kernel-sm8750.yml`](.github/workflows/build-kernel-sm8750.yml)
-on GitHub's ARM64 runner in a Fedora 44 container. The workflow copies the
+on GitHub's ARM64 runner in a `fedora:latest` container. The workflow copies the
 local config and DTB into `SOURCES`, downloads the pinned kernel and
 v4l2loopback sources with `spectool`, invokes `rpmbuild`, and uploads the
 RPMs and SRPMs as workflow artifacts. It does not access the tablet.
