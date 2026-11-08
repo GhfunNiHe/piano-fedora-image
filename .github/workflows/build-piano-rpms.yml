@@ -1,0 +1,145 @@
+name: Build Piano RPM Packages
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "piano-*/**"
+      - "iio-sensor-proxy-ssc/**"
+      - "xiaomi-piano-firmware/**"
+      - ".github/workflows/build-piano-rpms.yml"
+
+permissions:
+  contents: read
+
+env:
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.1.0/piano-ubuntu-v1.1.0-packages.zip
+
+jobs:
+  build:
+    name: Build RPMs
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: fedora:44
+      options: --user 0
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          set -euxo pipefail
+          dnf install -y \
+            curl dpkg dnf-plugins-core gzip patchelf rpm-build rpmdevtools \
+            systemd-rpm-macros tar unzip
+          rpmdev-setuptree
+          mkdir -p "$HOME/rpmbuild/tmp"
+
+      - name: Download and stage Debian payloads
+        run: |
+          set -euxo pipefail
+          curl --fail --location --retry 3 --output /tmp/piano-packages.zip \
+            "$PACKAGES_ZIP_URL"
+          unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
+
+          device_deb=$(find /tmp/piano-packages -type f \
+            -name 'piano-device-support_*.deb' -print -quit)
+          crosvm_deb=$(find /tmp/piano-packages -type f \
+            -name 'piano-crosvm_*.deb' -print -quit)
+          test -n "$device_deb"
+          test -n "$crosvm_deb"
+          deb_root=$(dirname "$device_deb")
+          vm_root=$(dirname "$crosvm_deb")
+
+          stage_deb() {
+            local rpm_name=$1
+            local stem=$2
+            local search_dir=${3:-$deb_root}
+            local deb work
+            deb=$(find "$search_dir" -maxdepth 1 -name "${stem}_*.deb" -print -quit)
+            test -n "$deb"
+            work=$(mktemp -d)
+            dpkg-deb -x "$deb" "$work/payload"
+            tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+              -czf "$HOME/rpmbuild/SOURCES/${rpm_name}-payload.tar.gz" -C "$work" payload
+            rm -rf "$work"
+          }
+
+          stage_deb piano-device-support piano-device-support
+          stage_deb piano-mipps-auth piano-mipps-auth
+          stage_deb piano-sensors piano-sensors
+          stage_deb iio-sensor-proxy-ssc piano-iio-sensor-proxy
+          stage_deb xiaomi-piano-firmware piano-local-firmware
+          stage_deb piano-camerad piano-camerad
+          stage_deb piano-iris-vaapi piano-iris-vaapi
+          stage_deb piano-crosvm piano-crosvm "$vm_root"
+          stage_deb piano-vm piano-vm "$vm_root"
+          stage_deb piano-vm-windows piano-vm-windows "$vm_root"
+
+          install -m0644 piano-sensors/iio-sensor-proxy.service.d/piano.conf \
+            "$HOME/rpmbuild/SOURCES/piano-sensors-iio-sensor-proxy.conf"
+          install -m0755 piano-device-support/zz-piano-boot \
+            "$HOME/rpmbuild/SOURCES/zz-piano-boot"
+          install -m0755 piano-device-support/zz-piano-boot-postrm \
+            "$HOME/rpmbuild/SOURCES/zz-piano-boot-postrm"
+          install -m0755 piano-device-support/piano-local-update \
+            "$HOME/rpmbuild/SOURCES/piano-local-update"
+
+      - name: Install RPM build dependencies
+        run: |
+          set -euxo pipefail
+          for spec in \
+            xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
+            piano-mipps-auth/piano-mipps-auth.spec \
+            piano-iris-vaapi/piano-iris-vaapi.spec \
+            iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
+            piano-sensors/piano-sensors.spec \
+            piano-camerad/piano-camerad.spec \
+            piano-device-support/piano-device-support.spec \
+            piano-crosvm/piano-crosvm.spec \
+            piano-vm/piano-vm.spec \
+            piano-vm-windows/piano-vm-windows.spec; do
+            dnf builddep -y "$spec"
+          done
+
+      - name: Build RPMs
+        run: |
+          set -euxo pipefail
+          for spec in \
+            xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
+            piano-mipps-auth/piano-mipps-auth.spec \
+            piano-iris-vaapi/piano-iris-vaapi.spec \
+            iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
+            piano-sensors/piano-sensors.spec \
+            piano-camerad/piano-camerad.spec \
+            piano-device-support/piano-device-support.spec \
+            piano-crosvm/piano-crosvm.spec \
+            piano-vm/piano-vm.spec \
+            piano-vm-windows/piano-vm-windows.spec; do
+            TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
+              --define "_topdir $HOME/rpmbuild" "$spec"
+          done
+
+      - name: Show package results
+        run: |
+          set -euxo pipefail
+          find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" \
+            -type f -printf '%p %s bytes\n' | sort
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: piano-rpms
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload SRPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: piano-srpms
+          path: ~/rpmbuild/SRPMS/**/*.src.rpm
+          if-no-files-found: error
+          retention-days: 14

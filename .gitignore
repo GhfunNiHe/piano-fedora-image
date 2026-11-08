@@ -1,0 +1,5 @@
+*.rpm
+*.src.rpm
+*.tar.gz
+*.tar.zst
+__pycache__/

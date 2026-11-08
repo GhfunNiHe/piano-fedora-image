@@ -1,0 +1,10 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Remove boot image state owned by a kernel after its package is removed.
+set -eu
+
+release=${1:-}
+[ -n "$release" ] || exit 0
+[ -e /etc/piano/layout.json ] || exit 0
+
+exec /usr/sbin/piano-boot-update --removed "$release"

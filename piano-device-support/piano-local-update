@@ -1,0 +1,161 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Build and write the boot image set for the slot this kernel is running from.
+# Values are read from the live system:
+#   release    the postinst argument
+#   slot       androidboot.slot_suffix from /proc/cmdline, else qbootctl -a
+#   partitions /dev/disk/by-partlabel/<name><slot>
+#   capacity   blockdev --getsize64 on the live partitions
+#   header     the current vendor_boot header
+#   root label /etc/piano/layout.json
+#   dtb        the DTB installed with this kernel release
+set -eu
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export PATH
+
+cleanup_removed()
+{
+    local removed=$1
+    local dry=${2:-}
+
+    case "$removed" in
+        ''|*[!A-Za-z0-9._+-]*)
+            echo "piano-local-update: invalid kernel release: $removed" >&2
+            exit 2
+            ;;
+    esac
+
+    if [ "$dry" = "--dry-run" ]; then
+        echo "piano-local-update: dry run, would remove /var/lib/piano/local/$removed"
+    else
+        rm -rf "/var/lib/piano/local/$removed"
+    fi
+}
+
+mode=${1:?usage: piano-local-update RELEASE [--dry-run] | piano-local-update --removed RELEASE [--dry-run]}
+case "$mode" in
+    --removed)
+        release=${2:?usage: piano-local-update --removed RELEASE [--dry-run]}
+        dry=${3:-}
+        cleanup_removed "$release" "$dry"
+        exit 0
+        ;;
+esac
+
+release=$mode
+dry=${2:-}
+
+cfg=/etc/piano
+tools=/usr/lib/piano/boot
+
+[ -e "$cfg/layout.json" ] || exit 0
+[ -e "$cfg/boot-profile.json" ] || exit 0
+[ -e "$cfg/boot-signing.pem" ] || exit 0
+[ -e "/boot/vmlinuz-$release" ] || exit 0
+[ -e "/boot/initrd.img-$release" ] || exit 0
+
+grep -qw 'piano.boot=persistent' /proc/cmdline || exit 0
+slot=$(sed -n 's/.*androidboot.slot_suffix=\([^ ]*\).*/\1/p' /proc/cmdline)
+if [ -z "$slot" ] && command -v qbootctl >/dev/null 2>&1; then
+    slot=$(qbootctl -a 2>/dev/null | sed -n 's/^Active slot: \(_.*\)$/\1/p')
+fi
+[ -n "$slot" ] || exit 0
+
+boot_part=/dev/disk/by-partlabel/boot${slot}
+init_part=/dev/disk/by-partlabel/init_boot${slot}
+vendor_part=/dev/disk/by-partlabel/vendor_boot${slot}
+for part in "$boot_part" "$init_part" "$vendor_part"; do
+    [ -e "$part" ] || { echo "piano-local-update: missing $part" >&2; exit 0; }
+done
+
+boot_bytes=$(blockdev --getsize64 "$boot_part")
+init_bytes=$(blockdev --getsize64 "$init_part")
+vendor_bytes=$(blockdev --getsize64 "$vendor_part")
+
+work=/var/lib/piano/local/$release
+rm -rf "$work"
+mkdir -p "$work"
+
+python3 - "$vendor_part" "$boot_bytes" "$init_bytes" "$vendor_bytes" \
+    "$cfg/boot-profile.json" "$work/profile.json" <<'PY'
+import json
+import struct
+import sys
+
+vendor_part, boot_bytes, init_bytes, vendor_bytes, src, dst = sys.argv[1:]
+
+head = open(vendor_part, 'rb').read(4096)
+if head[:8] != b'VNDRBOOT':
+    raise SystemExit('vendor_boot: bad magic')
+version, page_size, kernel_addr, ramdisk_addr = struct.unpack_from('<IIII', head, 8)
+tags_addr = struct.unpack_from('<I', head, 2076)[0]
+dtb_addr = struct.unpack_from('<Q', head, 2104)[0]
+
+profile = json.load(open(src))
+profile['vendor_boot'].update(
+    header_version=version,
+    page_size=page_size,
+    kernel_addr=kernel_addr,
+    ramdisk_addr=ramdisk_addr,
+    tags_addr=tags_addr,
+    dtb_addr=dtb_addr,
+)
+profile['boot']['capacity'] = int(boot_bytes)
+profile['init_boot']['capacity'] = int(init_bytes)
+profile['vendor_boot']['capacity'] = int(vendor_bytes)
+json.dump(profile, open(dst, 'w'), indent=2)
+PY
+
+root_spec=$(sed -n 's/.*root=\([^ ]*\).*/\1/p' /proc/cmdline)
+case "$root_spec" in
+    PARTLABEL=*)
+        root_kind=--root-partlabel
+        root_value=${root_spec#PARTLABEL=}
+        ;;
+    PARTUUID=*)
+        root_kind=--root-partuuid
+        root_value=${root_spec#PARTUUID=}
+        ;;
+    *)
+        root_kind=--root-partlabel
+        root_value=$(python3 -c 'import json; print(json.load(open("/etc/piano/layout.json"))["root_partlabel"])')
+        ;;
+esac
+[ -n "$root_value" ] || { echo "piano-local-update: cannot determine root partition" >&2; exit 0; }
+
+python3 "$tools/build-persistent-boot.py" \
+    --kernel "/boot/vmlinuz-$release" \
+    --kernel-release "$release" \
+    --dtb "/usr/lib/linux-image-$release/piano-boot.dtb" \
+    --initrd "/boot/initrd.img-$release" \
+    --profile "$work/profile.json" \
+    "$root_kind" "$root_value" \
+    --mkbootimg "$tools/mkbootimg.py" \
+    --avbtool "$tools/avbtool.py" \
+    --key "$cfg/boot-signing.pem" \
+    --bt-address-file "$cfg/bluetooth-address" \
+    --wlan-address-file "$cfg/wlan-address" \
+    --output "$work/images"
+
+(
+    cd "$work/images"
+    sha256sum -c SHA256SUMS
+)
+
+if [ "$dry" = "--dry-run" ]; then
+    echo "piano-local-update: dry run, images in $work/images"
+    exit 0
+fi
+
+backup=/var/lib/piano/backup/$release-$(date +%Y%m%d-%H%M%S)
+mkdir -p "$backup"
+dd if="$boot_part" of="$backup/boot.img" bs=4M conv=fsync status=none
+dd if="$init_part" of="$backup/init_boot.img" bs=4M conv=fsync status=none
+dd if="$vendor_part" of="$backup/vendor_boot.img" bs=4M conv=fsync status=none
+
+dd if="$work/images/boot.img" of="$boot_part" bs=4M conv=fsync status=none
+dd if="$work/images/init_boot.img" of="$init_part" bs=4M conv=fsync status=none
+dd if="$work/images/vendor_boot.img" of="$vendor_part" bs=4M conv=fsync status=none
+sync
+
+echo "piano-local-update: wrote slot$slot from $work/images; backup in $backup"

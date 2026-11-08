@@ -1,0 +1,93 @@
+name: Build kernel-sm8750 RPM
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "kernel-sm8750/**"
+      - ".github/workflows/build-kernel-sm8750.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: kernel-sm8750 (Fedora 44 aarch64)
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: fedora:44
+      options: --user 0
+    timeout-minutes: 360
+    env:
+      CCACHE_MAXSIZE: 4G
+      CCACHE_SLOPPINESS: file_macro,locale,time_macros
+      CCACHE_NOHASHDIR: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install RPM build tools
+        run: |
+          set -euxo pipefail
+          dnf install -y \
+            ccache dnf-plugins-core rpm-build rpmdevtools spectool systemd-rpm-macros
+          rpmdev-setuptree
+          mkdir -p "$HOME/rpmbuild/tmp"
+
+      - name: Restore ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: kernel-sm8750-ccache-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+          restore-keys: |
+            kernel-sm8750-ccache-${{ runner.os }}-${{ runner.arch }}-
+            kernel-sm8750-ccache-
+
+      - name: Stage local kernel inputs
+        run: |
+          set -euxo pipefail
+          install -m0644 kernel-sm8750/piano-kernel-7.2.15-sm8750-gd2710cd.config \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0644 kernel-sm8750/piano-boot.dtb \
+            "$HOME/rpmbuild/SOURCES/"
+
+      - name: Install spec build dependencies
+        run: |
+          set -euxo pipefail
+          dnf builddep -y kernel-sm8750/kernel-sm8750.spec
+
+      - name: Download pinned sources
+        run: |
+          set -euxo pipefail
+          spectool -g -R kernel-sm8750/kernel-sm8750.spec
+          ls -lh "$HOME/rpmbuild/SOURCES/"
+
+      - name: Build RPM and SRPM
+        run: |
+          set -euxo pipefail
+          export CCACHE_DIR="$HOME/.ccache"
+          TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
+            --define "_topdir $HOME/rpmbuild" \
+            kernel-sm8750/kernel-sm8750.spec
+
+      - name: Show package results
+        run: |
+          set -euxo pipefail
+          find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" -type f -printf '%p %s bytes\n' | sort
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-sm8750-rpms
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload SRPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-sm8750-srpms
+          path: ~/rpmbuild/SRPMS/*.src.rpm
+          if-no-files-found: error
+          retention-days: 14
