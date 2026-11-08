@@ -14,7 +14,7 @@ Source3:        zz-piano-boot-postrm
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       dracut openssl qbootctl
-Requires:       piano-mipps-auth
+Requires:       xiaomi-mipps-auth
 Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
 Recommends:     openssh-server
 

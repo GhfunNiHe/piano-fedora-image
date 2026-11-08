@@ -6,6 +6,7 @@ on:
     paths:
       - "piano-*/**"
       - "iio-sensor-proxy-ssc/**"
+      - "xiaomi-mipps-auth/**"
       - "xiaomi-piano-firmware/**"
       - ".github/workflows/build-piano-rpms.yml"
 
@@ -68,7 +69,6 @@ jobs:
           }
 
           stage_deb piano-device-support piano-device-support
-          stage_deb piano-mipps-auth piano-mipps-auth
           stage_deb piano-sensors piano-sensors
           stage_deb iio-sensor-proxy-ssc piano-iio-sensor-proxy
           stage_deb xiaomi-piano-firmware piano-local-firmware
@@ -86,13 +86,20 @@ jobs:
             "$HOME/rpmbuild/SOURCES/zz-piano-boot-postrm"
           install -m0755 piano-device-support/piano-local-update \
             "$HOME/rpmbuild/SOURCES/piano-local-update"
+          install -m0644 xiaomi-mipps-auth/0001-use-xiaomi-mca-and-dfp-before-svid.patch \
+            "$HOME/rpmbuild/SOURCES/0001-use-xiaomi-mca-and-dfp-before-svid.patch"
+          install -m0644 xiaomi-mipps-auth/xiaomi-mipps-auth.service \
+            "$HOME/rpmbuild/SOURCES/xiaomi-mipps-auth.service"
+          install -m0644 xiaomi-mipps-auth/90-xiaomi-mipps-auth.rules \
+            "$HOME/rpmbuild/SOURCES/90-xiaomi-mipps-auth.rules"
+          spectool -g -R xiaomi-mipps-auth/xiaomi-mipps-auth.spec
 
       - name: Install RPM build dependencies
         run: |
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            piano-mipps-auth/piano-mipps-auth.spec \
+            xiaomi-mipps-auth/xiaomi-mipps-auth.spec \
             piano-iris-vaapi/piano-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
@@ -109,7 +116,7 @@ jobs:
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            piano-mipps-auth/piano-mipps-auth.spec \
+            xiaomi-mipps-auth/xiaomi-mipps-auth.spec \
             piano-iris-vaapi/piano-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \

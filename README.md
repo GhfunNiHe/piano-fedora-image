@@ -21,7 +21,7 @@ provide that soname.
 | Source deb | RPM |
 |---|---|
 | `piano-device-support` | `piano-device-support` |
-| `piano-mipps-auth` | `piano-mipps-auth` |
+| `xiaomi-mipps-auth` | `xiaomi-mipps-auth` (source-built) |
 | `piano-sensors` | `piano-sensors` |
 | `piano-iio-sensor-proxy` | `iio-sensor-proxy-ssc` |
 | `piano-local-firmware` | `xiaomi-piano-firmware` |
@@ -49,7 +49,7 @@ pinned v1.1.0 packages zip, extracts the main and virtualization deb payloads,
 stages the local `piano-device-support`/`piano-sensors` files, installs
 `BuildRequires`, and invokes `rpmbuild` for each spec.
 
-The build order is firmware, MiPPS authentication, VA-API, SensorProxy,
+The build order is firmware, `xiaomi-mipps-auth`, VA-API, SensorProxy,
 sensor service/configuration, camera daemon, device support, then the optional
 crosvm, VM, and Windows VM packages. Runtime dependencies such as the
 kernel-provided camera module and the external Mesa are intentionally not
