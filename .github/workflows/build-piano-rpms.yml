@@ -6,7 +6,6 @@ on:
     paths:
       - "piano-*/**"
       - "iio-sensor-proxy-ssc/**"
-      - "xiaomi-mipps-auth/**"
       - "xiaomi-piano-firmware/**"
       - ".github/workflows/build-piano-rpms.yml"
 
@@ -16,8 +15,6 @@ permissions:
 env:
   PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.1.1/piano-ubuntu-v1.1.1-packages.zip
   PACKAGES_ZIP_SHA256: 31b6823170f00a56b675e5ce58c5f9bddcd107448336d00685a1e1032c394b08
-  MIPPS_PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.1.0/piano-ubuntu-v1.1.0-packages.zip
-  MIPPS_PACKAGES_ZIP_SHA256: 7a946da3b9288b440ceffe25ef70515f7b9df0844a6088b7c0e00731c41d3090
 
 jobs:
   build:
@@ -48,11 +45,6 @@ jobs:
             "$PACKAGES_ZIP_URL"
           echo "$PACKAGES_ZIP_SHA256  /tmp/piano-packages.zip" | sha256sum -c -
           unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
-          curl --fail --location --retry 3 --output /tmp/piano-mipps-packages.zip \
-            "$MIPPS_PACKAGES_ZIP_URL"
-          echo "$MIPPS_PACKAGES_ZIP_SHA256  /tmp/piano-mipps-packages.zip" | sha256sum -c -
-          unzip -q /tmp/piano-mipps-packages.zip \
-            'debs/piano-mipps-auth_*.deb' -d /tmp/piano-mipps-packages
 
           device_deb=$(find /tmp/piano-packages -type f \
             -name 'piano-device-support_*.deb' -print -quit)
@@ -62,7 +54,6 @@ jobs:
           test -n "$crosvm_deb"
           deb_root=$(dirname "$device_deb")
           vm_root=$(dirname "$crosvm_deb")
-          mipps_root=/tmp/piano-mipps-packages/debs
 
           stage_deb() {
             local rpm_name=$1
@@ -79,7 +70,6 @@ jobs:
           }
 
           stage_deb piano-device-support piano-device-support
-          stage_deb xiaomi-mipps-auth piano-mipps-auth "$mipps_root"
           stage_deb piano-sensors piano-sensors
           stage_deb iio-sensor-proxy-ssc piano-iio-sensor-proxy
           stage_deb xiaomi-piano-firmware piano-local-firmware
@@ -112,7 +102,6 @@ jobs:
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            xiaomi-mipps-auth/xiaomi-mipps-auth.spec \
             piano-iris-vaapi/piano-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
@@ -129,7 +118,6 @@ jobs:
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            xiaomi-mipps-auth/xiaomi-mipps-auth.spec \
             piano-iris-vaapi/piano-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \

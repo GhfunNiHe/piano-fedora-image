@@ -3,22 +3,22 @@
 
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.2.15
-%global KERNEL_COMMIT d2710cd13b337ef5172bd2394839e9d9673ff88a
-%global KERNEL_SHORT d2710cd
+%global KERNEL_COMMIT d50fa91b421ae2041e0e65ff6e038b4e818fb708
+%global KERNEL_SHORT d50fa91
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_VER}
-Release:        1.piano%{?dist}
+Release:        2.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
-Source1:        piano-kernel-7.2.15-sm8750-gd2710cd.config
-# Extracted from xiaomipad-8pro-mainline linux-image-7.2.15-piano58;
+Source1:        piano-kernel.config
+# Extracted from xiaomipad-8pro-mainline linux-image-7.2.15-piano64;
 # see piano-boot.dtb.provenance.json.
 Source2:        piano-boot.dtb
 Source3:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
@@ -36,10 +36,9 @@ Provides:       kernel-modules-core = %{version}-%{release}
 Provides:       piano-camera-loopback
 Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
-Requires:       piano-device-support >= 1.1.0
 
 %description
-The 7.2.15 SM8750 piano kernel built from the pinned linux-sm8750-piano
+The 7.2.15 SM8750 piano kernel built from the v1.1.1 linux-sm8750-piano
 commit with the locally maintained qbootctl configuration. The package
 installs the Image, modules, piano-boot.dtb and the matching v4l2loopback
 module. On a real system the package runs dracut and the piano-local updater
@@ -134,6 +133,12 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-2.piano
+- Update to the v1.1.1 kernel commit with in-kernel MiPPS authentication
+- Rename the local kernel config to piano-kernel.config
+- Refresh the config and composed DTB for the v1.1.1 release
+- Avoid an install-time dependency on piano-device-support
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 7.2.15-1.piano
 - Initial kernel-sm8750 source build template
 - Use the local qbootctl kernel config and piano-boot.dtb

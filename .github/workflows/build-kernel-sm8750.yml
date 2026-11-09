@@ -51,7 +51,7 @@ jobs:
       - name: Stage local kernel inputs
         run: |
           set -euxo pipefail
-          install -m0644 kernel-sm8750/piano-kernel-7.2.15-sm8750-gd2710cd.config \
+          install -m0644 kernel-sm8750/piano-kernel.config \
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 kernel-sm8750/piano-boot.dtb \
             "$HOME/rpmbuild/SOURCES/"

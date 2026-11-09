@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.1.1
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -20,9 +20,9 @@ BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl qbootctl
-Requires:       xiaomi-mipps-auth
 Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
 Recommends:     openssh-server
+Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 
 %description
 Runtime device support for the Xiaomi Pad 8 Pro: platform services, touch
@@ -142,6 +142,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-5
+- Remove the obsolete userspace MiPPS authentication helper dependency
+- Obsolete xiaomi-mipps-auth; the v1.1.1 kernel owns charger authentication
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-4
 - Move ALSA UCM and speaker up-mix policy into device support
 
