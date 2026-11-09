@@ -52,7 +52,11 @@ tools=/usr/lib/piano/boot
 [ -e "$cfg/boot-profile.json" ] || exit 0
 [ -e "$cfg/boot-signing.pem" ] || exit 0
 [ -e "/boot/vmlinuz-$release" ] || exit 0
-[ -e "/boot/initrd.img-$release" ] || exit 0
+initrd=/boot/initrd.img-$release
+if [ ! -e "$initrd" ]; then
+    initrd=/boot/initramfs-$release.img
+fi
+[ -e "$initrd" ] || exit 0
 
 grep -qw 'piano.boot=persistent' /proc/cmdline || exit 0
 slot=$(sed -n 's/.*androidboot.slot_suffix=\([^ ]*\).*/\1/p' /proc/cmdline)
@@ -127,7 +131,7 @@ python3 "$tools/build-persistent-boot.py" \
     --kernel "/boot/vmlinuz-$release" \
     --kernel-release "$release" \
     --dtb "/usr/lib/linux-image-$release/piano-boot.dtb" \
-    --initrd "/boot/initrd.img-$release" \
+    --initrd "$initrd" \
     --profile "$work/profile.json" \
     "$root_kind" "$root_value" \
     --mkbootimg "$tools/mkbootimg.py" \

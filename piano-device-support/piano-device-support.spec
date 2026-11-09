@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.1.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -14,7 +14,7 @@ Source3:        zz-piano-boot-postrm
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
-Requires:       dracut openssl qbootctl
+Requires:       dracut dtc gawk openssl qbootctl
 Requires:       xiaomi-mipps-auth
 Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
 Recommends:     openssh-server
@@ -22,8 +22,8 @@ Recommends:     openssh-server
 %description
 Runtime device support for the Xiaomi Pad 8 Pro: platform services, touch
 daemon, charging and Bluetooth helpers, power/sleep policy, developer mode,
-and the Debian-style local kernel post-install hook that rebuilds and writes
-the current slot's boot image set through qbootctl.
+and the local kernel post-install hook that rebuilds and writes the current
+slot's boot image set through qbootctl.
 
 %prep
 %autosetup -n payload
@@ -116,6 +116,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-2
+- Support both Debian initrd.img and Fedora dracut initramfs names
+- Require gawk and dtc for kernel post-install image regeneration
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-1
 - Update the payload to project release v1.1.1
 

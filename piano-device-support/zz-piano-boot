@@ -1,8 +1,8 @@
 #!/bin/sh
 # SPDX-License-Identifier: MIT
 # Rebuild this slot's boot image set after a kernel install.
-# Nothing here assumes a release naming scheme: every candidate is taken from
-# /boot/initrd.img-* and the newest one wins.
+# Fedora's dracut writes /boot/initramfs-*.img, while Debian-style images use
+# /boot/initrd.img-*. Accept both names and let the newest release win.
 set -eu
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
@@ -10,12 +10,24 @@ export PATH
 release=${1:-}
 [ -n "$release" ] || exit 0
 [ -e /etc/piano/layout.json ] || exit 0
-[ -e "/boot/initrd.img-$release" ] || exit 0
+[ -e "/boot/initrd.img-$release" ] ||
+    [ -e "/boot/initramfs-$release.img" ] || exit 0
 
 latest=
-for initrd in /boot/initrd.img-*; do
+for initrd in /boot/initrd.img-* /boot/initramfs-*.img; do
     [ -e "$initrd" ] || continue
-    candidate=${initrd##*/initrd.img-}
+    case "$initrd" in
+        /boot/initrd.img-*)
+            candidate=${initrd##*/initrd.img-}
+            ;;
+        /boot/initramfs-*.img)
+            candidate=${initrd##*/initramfs-}
+            candidate=${candidate%.img}
+            ;;
+        *)
+            continue
+            ;;
+    esac
     if [ -z "$latest" ] ||
        [ "$(printf '%s\n%s\n' "$latest" "$candidate" | sort -V | tail -n1)" = "$candidate" ]; then
         latest=$candidate

@@ -100,8 +100,11 @@ configuration/module, and the legacy `flash-kernel` marker. It installs local
 
 The Debian hook uses `linux-version sort`; the local `zz-piano-boot` entry
 uses GNU `sort -V`, since Fedora has no `linux-base`/`linux-version` package.
-The local files are already adapted for Fedora and are the source of truth
-for the RPM. The `piano-local-update` source file is installed as
+It accepts both Debian's `/boot/initrd.img-RELEASE` and Fedora dracut's
+`/boot/initramfs-RELEASE.img`. The package requires `gawk` for dracut logging
+and `dtc` for `fdtget` while validating the boot DTB. The local files are
+already adapted for Fedora and are the source of truth for the RPM.
+The `piano-local-update` source file is installed as
 `/usr/sbin/piano-boot-update`, directly replacing the original implementation.
 The logic reads the current slot, builds `boot`, `init_boot`, and
 `vendor_boot`, verifies `SHA256SUMS`, backs up the current three images, and
