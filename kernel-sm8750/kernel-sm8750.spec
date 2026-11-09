@@ -51,7 +51,7 @@ cp %{SOURCE1} .config
 
 # The configuration is intentionally local and exact. Do not replace it with
 # defconfig or the repository's release fragments.
-grep -Fxq 'CONFIG_LOCALVERSION="%{KERNEL_LOCALVERSION}"' .config
+grep -Fxq 'CONFIG_LOCALVERSION=""' .config
 grep -Fxq '# CONFIG_LOCALVERSION_AUTO is not set' .config
 
 %build
@@ -63,9 +63,9 @@ export KBUILD_BUILD_USER=piano
 export KBUILD_BUILD_HOST=mainline
 
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION= olddefconfig
+    LOCALVERSION="%{KERNEL_LOCALVERSION}" olddefconfig
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION= -j%{?_smp_build_ncpus} Image modules dtbs
+    LOCALVERSION="%{KERNEL_LOCALVERSION}" -j%{?_smp_build_ncpus} Image modules dtbs
 
 test "$(cat include/config/kernel.release)" = "%{KERNEL_RELEASE}"
 grep -F 'Linux version %{KERNEL_RELEASE} ' arch/arm64/boot/Image >/dev/null
@@ -78,7 +78,7 @@ KERNEL_DIR="$PWD" KERNELRELEASE="%{KERNEL_RELEASE}" \
 %install
 release=%{KERNEL_RELEASE}
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION= INSTALL_MOD_PATH=%{buildroot} INSTALL_MOD_STRIP=1 \
+    LOCALVERSION="%{KERNEL_LOCALVERSION}" INSTALL_MOD_PATH=%{buildroot} INSTALL_MOD_STRIP=1 \
     KERNELRELEASE="$release" modules_install
 
 rm -rf %{buildroot}/lib/modules/$release/build \

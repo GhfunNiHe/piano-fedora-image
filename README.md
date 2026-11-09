@@ -1,7 +1,7 @@
 # Piano Fedora RPM conversion templates
 
 These specs convert the ARM64 `.deb` payloads from the pinned
-`piano-ubuntu-v1.1.0-packages.zip` release asset into Fedora RPMs. The
+`piano-ubuntu-v1.1.1-packages.zip` release asset into Fedora RPMs. The
 workflow extracts the release payloads in CI; no local build helper scripts
 are used.
 
@@ -21,7 +21,7 @@ provide that soname.
 | Source deb | RPM |
 |---|---|
 | `piano-device-support` | `piano-device-support` |
-| `xiaomi-mipps-auth` | `xiaomi-mipps-auth` (source-built) |
+| `piano-mipps-auth` | `xiaomi-mipps-auth` (binary converted from v1.1.0) |
 | `piano-sensors` | `piano-sensors` |
 | `piano-iio-sensor-proxy` | `iio-sensor-proxy-ssc` |
 | `piano-local-firmware` | `xiaomi-piano-firmware` |
@@ -45,9 +45,11 @@ future transition does not silently lose firmware dependencies.
 The package set is built by
 [`.github/workflows/build-piano-rpms.yml`](.github/workflows/build-piano-rpms.yml)
 on GitHub's ARM64 runner in a `fedora:latest` container. The workflow downloads the
-pinned v1.1.0 packages zip, extracts the main and virtualization deb payloads,
-stages the local `piano-device-support`/`piano-sensors` files, installs
-`BuildRequires`, and invokes `rpmbuild` for each spec.
+pinned v1.1.1 packages zip, extracts the main and virtualization deb payloads,
+and separately fetches the v1.1.0 `piano-mipps-auth` deb because the v1.1.1
+release no longer ships that compatibility package. It stages the local
+`piano-device-support`/`piano-sensors` files, installs `BuildRequires`, and
+invokes `rpmbuild` for each spec.
 
 The build order is firmware, `xiaomi-mipps-auth`, VA-API, SensorProxy,
 sensor service/configuration, camera daemon, device support, then the optional

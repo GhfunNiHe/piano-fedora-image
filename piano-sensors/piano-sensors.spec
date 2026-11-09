@@ -11,7 +11,7 @@ Source0:        %{name}-payload.tar.gz
 Source1:        piano-sensors-iio-sensor-proxy.conf
 BuildRequires:  patchelf systemd-rpm-macros
 Requires:       python3 systemd systemd-udev
-Requires:       iio-sensor-proxy-ssc = 3.9
+Requires:       iio-sensor-proxy-ssc = 3.9+piano20261108.1
 Conflicts:      hexagonrpc hexagonrpcd
 
 %description

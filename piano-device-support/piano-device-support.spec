@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.1.0
+Version:        1.1.1
 Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND GPL-2.0-only AND Apache-2.0
@@ -12,7 +12,8 @@ Source1:        zz-piano-boot
 Source2:        piano-local-update
 Source3:        zz-piano-boot-postrm
 BuildRequires:  systemd-rpm-macros
-Requires:       python3 kmod pam polkit systemd systemd-udev util-linux coreutils iproute
+Requires:       python3 python3-gobject python3-pyudev systemd-libs
+Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       dracut openssl qbootctl
 Requires:       xiaomi-mipps-auth
 Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
@@ -95,6 +96,8 @@ sed -i \
 %{_prefix}/lib/systemd/sleep.conf.d
 %{_udevrulesdir}
 %{_sysusersdir}/piano-gunyah.conf
+%{_sysusersdir}/piano-pen.conf
+%{_datadir}/piano/pen
 %{_datadir}/polkit-1/actions/io.github.piano.devmode.policy
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
 
@@ -113,6 +116,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-1
+- Update the payload to project release v1.1.1
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.0-1
 - Initial binary conversion template
 - Replace the old kernel image hooks with the local slot-update hook
