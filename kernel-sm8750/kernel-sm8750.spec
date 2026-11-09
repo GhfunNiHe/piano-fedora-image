@@ -137,6 +137,8 @@ fi
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-3.piano
 - Retry MiPPS in DFP when the initial UFP VDM query times out
 - Restore UFP for non-Xiaomi sources and leave authenticated Xiaomi adapters in DFP
+- Keep the USB role switch in sync with the temporary data-role swap so OTG
+  devices continue to enumerate after MiPPS authentication
 
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-2.piano
 - Update to the v1.1.1 kernel commit with in-kernel MiPPS authentication
