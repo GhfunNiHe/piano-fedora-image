@@ -2,19 +2,24 @@
 
 Name:           piano-device-support
 Version:        1.1.1
-Release:        2%{?dist}
+Release:        4%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
-License:        MIT AND GPL-2.0-only AND Apache-2.0
+License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        %{name}-payload.tar.gz
 Source1:        zz-piano-boot
 Source2:        piano-local-update
 Source3:        zz-piano-boot-postrm
+Source4:        Xiaomi-Pad-8-Pro.conf
+Source5:        Xiaomi-Pad-8-Pro-HiFi.conf
+Source6:        Piano-Capture-Diag.conf
+Source7:        Piano-Capture-Diag-HiFi.conf
+Source8:        50-piano-speaker-upmix.conf
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
-Requires:       dracut dtc gawk openssl qbootctl
+Requires:       alsa-ucm dracut dtc gawk openssl qbootctl
 Requires:       xiaomi-mipps-auth
 Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
 Recommends:     openssh-server
@@ -36,13 +41,11 @@ install -d %{buildroot}%{_prefix}
 cp -a usr/. %{buildroot}%{_prefix}/
 cp -a etc/. %{buildroot}/etc/
 
-# Kernel/initramfs image regeneration is outside this RPM set.
+# The kernel image hooks are replaced below. Keep the dracut module because
+# built-in remoteproc/display drivers probe before the persistent root exists.
 rm -f %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
 rm -f %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 rm -f %{buildroot}/etc/initramfs/post-update.d/zz-piano-boot
-rm -f %{buildroot}/etc/dracut.conf.d/90-piano.conf
-rm -f %{buildroot}/etc/dracut.conf.d/91-piano-gunyah.conf
-rm -rf %{buildroot}%{_prefix}/lib/dracut/modules.d/99piano
 rm -f %{buildroot}%{_prefix}/sbin/piano-boot-update
 rm -f %{buildroot}%{_prefix}/sbin/piano-boot-switch
 rm -f %{buildroot}%{_prefix}/sbin/piano-slot-success
@@ -59,7 +62,6 @@ rmdir %{buildroot}/etc/kernel/postrm.d 2>/dev/null || :
 rmdir %{buildroot}/etc/kernel 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs/post-update.d 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs 2>/dev/null || :
-rmdir %{buildroot}/etc/dracut.conf.d 2>/dev/null || :
 
 # Replace the original updater at its existing path. The postinst/postrm
 # entries keep calling /usr/sbin/piano-boot-update.
@@ -69,6 +71,23 @@ install -Dm755 %{SOURCE2} \
     %{buildroot}%{_prefix}/sbin/piano-boot-update
 install -Dm755 %{SOURCE3} \
     %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
+install -Dm644 %{SOURCE4} \
+    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf
+install -Dm644 %{SOURCE5} \
+    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/HiFi.conf
+install -Dm644 %{SOURCE6} \
+    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf
+install -Dm644 %{SOURCE7} \
+    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/HiFi.conf
+install -d %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750
+ln -s ../../Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf \
+    %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Xiaomi-Pad-8-Pro.conf
+ln -s ../../Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf \
+    %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Piano-Capture-Diag.conf
+install -Dm644 %{SOURCE8} \
+    %{buildroot}%{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
+install -Dm644 %{SOURCE8} \
+    %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
 
 # The switch store and its privileged UI are not part of this qbootctl setup.
 sed -i \
@@ -82,8 +101,15 @@ sed -i \
 %doc %{_datadir}/doc/piano-device-support/NOTICE
 %config(noreplace) /etc/security/limits.d/90-piano-gunyah.conf
 %config(noreplace) /etc/piano-network
+%config(noreplace) /etc/dracut.conf.d/90-piano.conf
+%config(noreplace) /etc/dracut.conf.d/91-piano-gunyah.conf
 /etc/kernel/postinst.d/zz-piano-boot
 /etc/kernel/postrm.d/zz-piano-boot
+%{_prefix}/lib/dracut/modules.d/99piano
+%{_datadir}/alsa/ucm2/Qualcomm/sm8750
+%{_datadir}/alsa/ucm2/conf.d/sm8750
+%{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
+%{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
 %{_bindir}/piano-check
 %{_libexecdir}/piano
 %{_prefix}/lib/piano
@@ -116,6 +142,13 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-4
+- Move ALSA UCM and speaker up-mix policy into device support
+
+* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-3
+- Restore the Piano dracut module and firmware collection
+- Include ADSP firmware in the initramfs for early remoteproc startup
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-2
 - Support both Debian initrd.img and Fedora dracut initramfs names
 - Require gawk and dtc for kernel post-install image regeneration

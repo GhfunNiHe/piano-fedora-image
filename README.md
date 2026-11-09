@@ -92,9 +92,10 @@ installed Windows image.
 
 ## Kernel hook in `piano-device-support`
 
-The device-support spec removes the old hook payloads, the Piano dracut
-configuration/module, and the legacy `flash-kernel` marker. It installs local
-`zz-piano-boot` postinst/postrm entries that point at the
+The device-support spec replaces the old hook payloads and removes the legacy
+`flash-kernel` marker. It preserves the Piano dracut configuration/module so
+firmware needed by built-in display and remoteproc drivers is available before
+switch-root. It installs local `zz-piano-boot` postinst/postrm entries that point at the
 `piano-local-update` implementation installed at the original updater path,
 `/usr/sbin/piano-boot-update`.
 
@@ -116,6 +117,11 @@ The postrm entry `zz-piano-boot` calls
 `ubuntu.prev` rollback rotation, and Android switching logic are not part of
 this package because slots are managed with `qbootctl`. Kernel files and
 `/var/lib/piano/backup` archives are left to the package manager and the user.
+
+`piano-device-support` also owns the platform audio policy: the Qualcomm
+SM8750 ALSA UCM files for `Xiaomi-Pad-8-Pro` and the PipeWire stereo-to-four-
+speaker up-mix. These are hardware configuration and must not depend on a
+particular desktop package.
 
 The spec also removes `piano-boot-switch`, `piano-slot-success`,
 `piano-emergency-android`, `piano_bootslot.py`, their service units, the

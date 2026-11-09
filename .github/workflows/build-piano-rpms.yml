@@ -97,6 +97,16 @@ jobs:
             "$HOME/rpmbuild/SOURCES/zz-piano-boot-postrm"
           install -m0755 piano-device-support/piano-local-update \
             "$HOME/rpmbuild/SOURCES/piano-local-update"
+          install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
+            "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro.conf"
+          install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro-HiFi.conf \
+            "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro-HiFi.conf"
+          install -m0644 piano-device-support/audio/Piano-Capture-Diag.conf \
+            "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag.conf"
+          install -m0644 piano-device-support/audio/Piano-Capture-Diag-HiFi.conf \
+            "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag-HiFi.conf"
+          install -m0644 piano-device-support/audio/50-piano-speaker-upmix.conf \
+            "$HOME/rpmbuild/SOURCES/50-piano-speaker-upmix.conf"
       - name: Install RPM build dependencies
         run: |
           set -euxo pipefail
