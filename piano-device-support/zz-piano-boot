@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Rebuild this slot's boot image set after a kernel install.
 # Fedora's dracut writes /boot/initramfs-*.img, while Debian-style images use
-# /boot/initrd.img-*. Accept both names and let the newest release win.
+# /boot/initrd.img-*. Accept both names and let the newest initramfs win.
 set -eu
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
@@ -14,6 +14,7 @@ release=${1:-}
     [ -e "/boot/initramfs-$release.img" ] || exit 0
 
 latest=
+latest_initrd=
 for initrd in /boot/initrd.img-* /boot/initramfs-*.img; do
     [ -e "$initrd" ] || continue
     case "$initrd" in
@@ -28,14 +29,14 @@ for initrd in /boot/initrd.img-* /boot/initramfs-*.img; do
             continue
             ;;
     esac
-    if [ -z "$latest" ] ||
-       [ "$(printf '%s\n%s\n' "$latest" "$candidate" | sort -V | tail -n1)" = "$candidate" ]; then
+    if [ -z "$latest_initrd" ] || [ "$initrd" -nt "$latest_initrd" ]; then
         latest=$candidate
+        latest_initrd=$initrd
     fi
 done
 
 if [ "$release" != "$latest" ]; then
-    echo "zz-piano-boot: $release is older than $latest; boot image set unchanged" >&2
+    echo "zz-piano-boot: $release is not the newest installed kernel ($latest); boot image set unchanged" >&2
     exit 0
 fi
 

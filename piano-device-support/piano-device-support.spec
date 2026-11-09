@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.1.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -142,6 +142,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-6
+- Select the boot image source by initramfs mtime instead of version sorting
+- Avoid treating Git hash releases such as gd50fa91 as older than gd2710cd
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-5
 - Remove the obsolete userspace MiPPS authentication helper dependency
 - Obsolete xiaomi-mipps-auth; the v1.1.1 kernel owns charger authentication
