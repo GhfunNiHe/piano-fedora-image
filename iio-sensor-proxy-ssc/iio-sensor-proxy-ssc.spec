@@ -2,14 +2,14 @@
 
 Name:           iio-sensor-proxy-ssc
 Version:        3.9+piano20261108.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        IIO sensor proxy with Qualcomm SSC support
 License:        GPL-3.0-or-later
 URL:            https://gitlab.freedesktop.org/hadess/iio-sensor-proxy
 ExclusiveArch:  aarch64
 Source0:        %{name}-payload.tar.gz
 BuildRequires:  patchelf systemd-rpm-macros
-Provides:       iio-sensor-proxy = 3.9
+Provides:       iio-sensor-proxy%{?_isa}
 Provides:       piano-iio-sensor-proxy = %{version}-%{release}
 Conflicts:      iio-sensor-proxy
 Obsoletes:      iio-sensor-proxy < %{version}
@@ -87,5 +87,8 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 3.9+piano20261108.1-2
+- Provide the architecture-qualified iio-sensor-proxy capability required by KWin
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 3.9+piano20261108.1-1
 - Rename the generic proxy package from piano-iio-sensor-proxy
