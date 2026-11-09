@@ -10,7 +10,7 @@
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_VER}
-Release:        2.piano%{?dist}
+Release:        3.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
@@ -22,6 +22,7 @@ Source1:        piano-kernel.config
 # see piano-boot.dtb.provenance.json.
 Source2:        piano-boot.dtb
 Source3:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
+Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
 BuildRequires:  gcc hostname kmod lld llvm make openssl-devel perl-interpreter
@@ -45,7 +46,7 @@ module. On a real system the package runs dracut and the piano-local updater
 after installation.
 
 %prep
-%setup -q -n linux-sm8750-piano-%{KERNEL_COMMIT}
+%autosetup -p1 -n linux-sm8750-piano-%{KERNEL_COMMIT}
 cp %{SOURCE1} .config
 
 # The configuration is intentionally local and exact. Do not replace it with
@@ -133,6 +134,10 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-3.piano
+- Retry MiPPS in DFP when the initial UFP VDM query times out
+- Restore UFP for non-Xiaomi sources and leave authenticated Xiaomi adapters in DFP
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-2.piano
 - Update to the v1.1.1 kernel commit with in-kernel MiPPS authentication
 - Rename the local kernel config to piano-kernel.config

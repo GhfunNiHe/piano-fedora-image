@@ -55,6 +55,8 @@ jobs:
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 kernel-sm8750/piano-boot.dtb \
             "$HOME/rpmbuild/SOURCES/"
+          install -m0644 kernel-sm8750/0001-xiaomi-mca-retry-mipps-in-dfp.patch \
+            "$HOME/rpmbuild/SOURCES/"
 
       - name: Install spec build dependencies
         run: |
