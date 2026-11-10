@@ -12,13 +12,14 @@ Source1:        gunyahvm-runtime-payload.tar.gz
 Source2:        gunyahvm-guest-kernel-payload.tar.gz
 Source3:        gunyahvm-guest-mesa-payload.tar.gz
 BuildRequires:  systemd-rpm-macros
-Requires:       gunyahvm-runtime = %{version}-%{release}
+Requires:       gunyahvm-runtime
 Requires:       python3 python3-gobject python3-dbus gtk4 libadwaita
 Requires:       ca-certificates qemu-img e2fsprogs zstd genisoimage
 Requires:       openssh-clients NetworkManager dnsmasq iproute polkit
 Requires:       systemd systemd-udev kmod util-linux
 Requires:       7zip wimlib-utils ntfs-3g python3-hivex
-Requires:       dosfstools mtools remmina
+Requires:       dosfstools mtools
+Recommends:     remmina
 
 %description
 GunyahVM GTK and command-line application for running Linux and Windows
@@ -26,8 +27,8 @@ ARM64 virtual machines through the host kernel's Qualcomm Gunyah interface.
 
 %package runtime
 Summary:        Private GunyahVM crosvm and virglrenderer runtime
-Requires:       gunyahvm-guest-kernel = %{version}-%{release}
-Requires:       gunyahvm-guest-mesa = %{version}-%{release}
+Recommends:     gunyahvm-guest-kernel
+Recommends:     gunyahvm-guest-mesa
 Requires:       python3 libcap libwayland-client libvncserver
 Requires:       libepoxy mesa-libgbm libdrm libglvnd-egl libglvnd-gles
 Requires:       libglvnd-glx vulkan-loader
