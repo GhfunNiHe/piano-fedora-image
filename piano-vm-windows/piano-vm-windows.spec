@@ -11,7 +11,8 @@ Source0:        %{name}-payload.tar.gz
 Requires:       piano-vm = 1.0.0
 # Fedora provides the Remmina VNC plugin from the remmina package itself.
 Requires:       7zip wimlib-utils python3-hivex dosfstools mtools ntfs-3g
-Requires:       util-linux remmina
+Requires:       util-linux
+Recommends:     remmina
 
 %description
 Preparation tools, UEFI firmware, Windows ARM64 virtio drivers, and Remmina
