@@ -7,6 +7,7 @@
 %global KERNEL_SHORT ff6cf0a
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
+%global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_VER}
@@ -55,6 +56,7 @@ grep -Fxq 'CONFIG_LOCALVERSION=""' .config
 grep -Fxq '# CONFIG_LOCALVERSION_AUTO is not set' .config
 
 %build
+export KCFLAGS="%{PIANO_KCFLAGS}"
 export CCACHE_DIR="${CCACHE_DIR:-$HOME/.ccache}"
 export CCACHE_MAXSIZE="${CCACHE_MAXSIZE:-10G}"
 export CCACHE_SLOPPINESS="${CCACHE_SLOPPINESS:-file_macro,locale,time_macros}"
@@ -137,6 +139,7 @@ fi
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-4.piano
 - Follow the v1.2.0 kernel commit without adopting its release string
 - Merge the upstream flash and lockup detector configuration changes
+- Build with O3, Armv8.7-A and the LLVM Oryon scheduling model
 
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-3.piano
 - Retry MiPPS in DFP when the initial UFP VDM query times out
