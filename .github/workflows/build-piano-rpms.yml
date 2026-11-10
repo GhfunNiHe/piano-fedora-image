@@ -7,14 +7,15 @@ on:
       - "piano-*/**"
       - "iio-sensor-proxy-ssc/**"
       - "xiaomi-piano-firmware/**"
+      - "gunyahvm/**"
       - ".github/workflows/build-piano-rpms.yml"
 
 permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.1.1/piano-ubuntu-v1.1.1-packages.zip
-  PACKAGES_ZIP_SHA256: 31b6823170f00a56b675e5ce58c5f9bddcd107448336d00685a1e1032c394b08
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.2.0/piano-ubuntu-v1.2.0-packages.zip
+  PACKAGES_ZIP_SHA256: f3aa35c93d3963bee78794b06fb91a8b13bbeacf70f836e7042435dbfaddbf7a
 
 jobs:
   build:
@@ -27,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install build tools
         run: |
@@ -78,6 +79,10 @@ jobs:
           stage_deb piano-crosvm piano-crosvm "$vm_root"
           stage_deb piano-vm piano-vm "$vm_root"
           stage_deb piano-vm-windows piano-vm-windows "$vm_root"
+          stage_deb gunyahvm gunyahvm
+          stage_deb gunyahvm-runtime gunyahvm-runtime
+          stage_deb gunyahvm-guest-kernel gunyahvm-guest-kernel
+          stage_deb gunyahvm-guest-mesa gunyahvm-guest-mesa
 
           install -m0644 piano-sensors/iio-sensor-proxy.service.d/piano.conf \
             "$HOME/rpmbuild/SOURCES/piano-sensors-iio-sensor-proxy.conf"
@@ -107,6 +112,7 @@ jobs:
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
+            gunyahvm/gunyahvm.spec \
             piano-crosvm/piano-crosvm.spec \
             piano-vm/piano-vm.spec \
             piano-vm-windows/piano-vm-windows.spec; do
@@ -123,6 +129,7 @@ jobs:
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
+            gunyahvm/gunyahvm.spec \
             piano-crosvm/piano-crosvm.spec \
             piano-vm/piano-vm.spec \
             piano-vm-windows/piano-vm-windows.spec; do
@@ -137,7 +144,7 @@ jobs:
             -type f -printf '%p %s bytes\n' | sort
 
       - name: Upload RPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piano-rpms
           path: ~/rpmbuild/RPMS/**/*.rpm
@@ -145,7 +152,7 @@ jobs:
           retention-days: 14
 
       - name: Upload SRPMs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piano-srpms
           path: ~/rpmbuild/SRPMS/**/*.src.rpm
@@ -164,13 +171,13 @@ jobs:
         run: echo "SHORT_SHA=$(echo "${GITHUB_SHA}" | cut -c1-7)" >> "$GITHUB_ENV"
 
       - name: Download RPMs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: piano-rpms
           path: rpms
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: piano-${{ env.SHORT_SHA }}
           name: Piano Packages (${{ env.SHORT_SHA }})

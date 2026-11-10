@@ -3,14 +3,14 @@
 
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.2.15
-%global KERNEL_COMMIT d50fa91b421ae2041e0e65ff6e038b4e818fb708
-%global KERNEL_SHORT d50fa91
+%global KERNEL_COMMIT ff6cf0aafb8fd28c464c90e6fe9419960911f3a6
+%global KERNEL_SHORT ff6cf0a
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_VER}
-Release:        3.piano%{?dist}
+Release:        4.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
@@ -134,6 +134,10 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-4.piano
+- Follow the v1.2.0 kernel commit without adopting its release string
+- Merge the upstream flash and lockup detector configuration changes
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-3.piano
 - Retry MiPPS in DFP when the initial UFP VDM query times out
 - Restore UFP for non-Xiaomi sources and leave authenticated Xiaomi adapters in DFP

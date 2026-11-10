@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           iio-sensor-proxy-ssc
-Version:        3.9+piano20261108.1
-Release:        2%{?dist}
+Version:        3.9+piano20261110.1
+Release:        1%{?dist}
 Summary:        IIO sensor proxy with Qualcomm SSC support
 License:        GPL-3.0-or-later
 URL:            https://gitlab.freedesktop.org/hadess/iio-sensor-proxy
@@ -30,6 +30,7 @@ policy are supplied by the separate piano-sensors package.
 
 %install
 install -Dm755 usr/bin/monitor-sensor %{buildroot}%{_bindir}/monitor-sensor
+install -Dm755 usr/bin/piano-sensors-check %{buildroot}%{_bindir}/piano-sensors-check
 install -Dm755 usr/libexec/iio-sensor-proxy %{buildroot}%{_libexecdir}/iio-sensor-proxy
 install -Dm644 usr/lib/aarch64-linux-gnu/piano-iio-sensor-proxy/libssc.so.2 \
     %{buildroot}%{_libdir}/iio-sensor-proxy-ssc/libssc.so.2
@@ -48,6 +49,8 @@ install -Dm644 usr/share/polkit-1/actions/net.hadess.SensorProxy.policy \
     %{buildroot}%{_datadir}/polkit-1/actions/net.hadess.SensorProxy.policy
 install -Dm644 usr/share/man/man1/monitor-sensor.1.gz \
     %{buildroot}%{_mandir}/man1/monitor-sensor.1.gz
+install -Dm644 usr/share/man/man1/piano-sensors-check.1.gz \
+    %{buildroot}%{_mandir}/man1/piano-sensors-check.1.gz
 
 install -Dm644 usr/share/doc/piano-iio-sensor-proxy/copyright \
     %{buildroot}%{_datadir}/doc/%{name}/copyright
@@ -61,6 +64,7 @@ install -Dm644 usr/share/doc/piano-iio-sensor-proxy/sources.json \
 %doc %{_datadir}/doc/%{name}/NOTICE
 %doc %{_datadir}/doc/%{name}/sources.json
 %{_bindir}/monitor-sensor
+%{_bindir}/piano-sensors-check
 %{_libexecdir}/iio-sensor-proxy
 %{_libdir}/iio-sensor-proxy-ssc/libssc.so.2
 %{_unitdir}/iio-sensor-proxy.service
@@ -69,6 +73,7 @@ install -Dm644 usr/share/doc/piano-iio-sensor-proxy/sources.json \
 %{_datadir}/dbus-1/system.d/net.hadess.SensorProxy.conf
 %{_datadir}/polkit-1/actions/net.hadess.SensorProxy.policy
 %{_mandir}/man1/monitor-sensor.1.gz
+%{_mandir}/man1/piano-sensors-check.1.gz
 
 %post
 %systemd_post iio-sensor-proxy.service
@@ -87,6 +92,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 3.9+piano20261110.1-1
+- Update to the v1.2.0 sensor proxy payload
+- Install the piano-sensors-check helper
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 3.9+piano20261108.1-2
 - Provide the architecture-qualified iio-sensor-proxy capability required by KWin
 

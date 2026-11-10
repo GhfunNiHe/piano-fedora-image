@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.1.1
-Release:        6%{?dist}
+Version:        1.2.0.1
+Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -128,7 +128,11 @@ sed -i \
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
 
 %post
-%systemd_post piano-debug.service piano-debug-timeout.service
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl disable --now piano-debug.service >/dev/null 2>&1 || :
+fi
+rm -f /etc/systemd/system/multi-user.target.wants/piano-debug.service
+%systemd_post piano-debug-timeout.service piano-pen-radio.service
 if command -v udevadm >/dev/null 2>&1; then
     udevadm control --reload-rules || :
     if [ -e /sys/class/misc/gunyah ]; then
@@ -142,6 +146,11 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.2.0.1-1
+- Update to the v1.2.0 device support payload
+- Retire the old default USB debug console
+- Enable pen radio initialization through the systemd preset
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-6
 - Select the boot image source by initramfs mtime instead of version sorting
 - Avoid treating Git hash releases such as gd50fa91 as older than gd2710cd

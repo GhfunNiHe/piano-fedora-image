@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-sensors
-Version:        0.1+20261022.2
+Version:        0.1+20261110.1
 Release:        1%{?dist}
 Summary:        Qualcomm ADSP sensor service and configuration for Piano
 License:        GPL-3.0-or-later AND LicenseRef-Proprietary
@@ -11,7 +11,7 @@ Source0:        %{name}-payload.tar.gz
 Source1:        piano-sensors-iio-sensor-proxy.conf
 BuildRequires:  patchelf systemd-rpm-macros
 Requires:       python3 systemd systemd-udev
-Requires:       iio-sensor-proxy-ssc = 3.9+piano20261108.1
+Requires:       iio-sensor-proxy-ssc = 3.9+piano20261110.1
 Conflicts:      hexagonrpc hexagonrpcd
 
 %description
@@ -44,6 +44,8 @@ install -Dm644 %{SOURCE1} \
 %doc %{_datadir}/doc/piano-sensors/README.zh-CN.md
 %doc %{_datadir}/doc/piano-sensors/sources.json
 %doc %{_datadir}/doc/piano-sensors/changelog.gz
+%doc %{_datadir}/doc/piano-sensors/firmware-policy.md
+%doc %{_datadir}/doc/piano-sensors/proprietary-firmware.txt
 %{_bindir}/hexagonrpcd
 %{_libdir}/piano-sensors/libhexagonrpc.so.0.5
 %{_libexecdir}/piano/qrtr.py
@@ -72,5 +74,8 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 0.1+20261110.1-1
+- Update to the v1.2.0 sensor service and configuration payload
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 0.1+20261022.2-1
 - Initial binary conversion template
