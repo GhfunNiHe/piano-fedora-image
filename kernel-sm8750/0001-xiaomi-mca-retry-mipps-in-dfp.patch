@@ -1,5 +1,5 @@
 diff --git a/drivers/power/supply/xiaomi_mca.c b/drivers/power/supply/xiaomi_mca.c
-index b96ea81c3..d0905f618 100644
+index b96ea81c3..d211bf3e7 100644
 --- a/drivers/power/supply/xiaomi_mca.c
 +++ b/drivers/power/supply/xiaomi_mca.c
 @@ -44,6 +44,7 @@
@@ -36,10 +36,24 @@ index b96ea81c3..d0905f618 100644
  	case MCA_PROP_VDM_VERSION:
  	case MCA_PROP_VDM_VOLTAGE:
  	case MCA_PROP_VDM_TEMP:
-@@ -1321,6 +1327,67 @@ static int xiaomi_mca_vdm(struct xiaomi_mca *mca, unsigned int generation,
+@@ -1321,6 +1327,73 @@ static int xiaomi_mca_vdm(struct xiaomi_mca *mca, unsigned int generation,
  	return -ETIMEDOUT;
  }
  
++static void xiaomi_mca_sync_usb_role(struct xiaomi_mca *mca,
++				     enum usb_role role)
++{
++	int ret;
++
++	if (!mca->usb_role_sw)
++		return;
++
++	ret = usb_role_switch_set_role(mca->usb_role_sw, role);
++	if (ret)
++		dev_warn(mca->dev, "failed to set USB %s role: %d\n",
++			 role == USB_ROLE_HOST ? "host" : "device", ret);
++}
++
 +static int xiaomi_mca_set_role(struct xiaomi_mca *mca, u32 generation, u32 role)
 +{
 +	enum usb_role usb_role = role == MCA_DATA_ROLE_DFP ?
@@ -56,15 +70,7 @@ index b96ea81c3..d0905f618 100644
 +		if (!xiaomi_mca_auth_current(mca, generation))
 +			return -ENODEV;
 +		if (xiaomi_mca_read_u32(mca, MCA_PROP_DATA_ROLE) == role) {
-+			if (mca->usb_role_sw) {
-+				ret = usb_role_switch_set_role(mca->usb_role_sw,
-+							       usb_role);
-+				if (ret)
-+					dev_warn(mca->dev,
-+						 "failed to set USB %s role: %d\n",
-+						 usb_role == USB_ROLE_HOST ?
-+						 "host" : "device", ret);
-+			}
++			xiaomi_mca_sync_usb_role(mca, usb_role);
 +			return 0;
 +		}
 +		msleep(20);
@@ -104,7 +110,7 @@ index b96ea81c3..d0905f618 100644
  static bool xiaomi_mca_mipps_digest(struct xiaomi_mca *mca,
  				  const struct piano_mipps_key *key,
  				  u8 message[20], const u8 response[MCA_VDM_LEN],
-@@ -1373,7 +1440,7 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1373,7 +1446,7 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	unsigned int generation = READ_ONCE(mca->service_generation);
  	u32 attachment = READ_ONCE(mca->attach_generation);
  	u32 adapter_id;
@@ -113,7 +119,7 @@ index b96ea81c3..d0905f618 100644
  	int i, ret;
  
  	if (!mipps_auth || mca->mipps_attempted || xiaomi_mca_authenticated(mca) ||
-@@ -1397,8 +1464,17 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1397,8 +1470,17 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	if (ret)
  		goto finish;
  
@@ -132,7 +138,7 @@ index b96ea81c3..d0905f618 100644
  	if (ret)
  		goto finish;
  	ret = xiaomi_mca_read_blob(mca, MCA_PROP_VDM_VERSION, &version, sizeof(version));
-@@ -1458,6 +1534,8 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1458,6 +1540,8 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	}
  finish:
  	if (generation == READ_ONCE(mca->service_generation)) {
@@ -141,7 +147,33 @@ index b96ea81c3..d0905f618 100644
  		if (ret && discovered) {
  			xiaomi_mca_write_u32(mca, MCA_PROP_PD_VERIFIED, 0);
  			if (xiaomi_mca_auth_current(mca, generation))
-@@ -4311,6 +4389,37 @@ static int xiaomi_mca_battery_ext_register(struct xiaomi_mca *mca)
+@@ -3212,6 +3296,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
+ 			mca->otg_active = true;
+ 			ret = xiaomi_mca_otg_cp(mca, record.data[0] ?
+ 					SC8541_OTG_REVERSE_ON : SC8541_OTG_REVERSE_OFF);
++			if (!ret && record.data[0])
++				xiaomi_mca_sync_usb_role(mca, USB_ROLE_HOST);
+ 			if (!ret && !record.data[0])
+ 				mca->otg_active = false;
+ 			break;
+@@ -3223,6 +3309,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
+ 			 */
+ 			ret = xiaomi_mca_read_blob(mca, MCA_PROP_OTG_PLUGIN,
+ 						  &plugin, sizeof(plugin));
++			if (!ret && plugin)
++				xiaomi_mca_sync_usb_role(mca, USB_ROLE_HOST);
+ 			if (!ret && !plugin)
+ 				ret = xiaomi_mca_otg_cp(mca, SC8541_OTG_DETACH);
+ 			break;
+@@ -3338,6 +3426,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca)
+ 	if (attachment != mca->policy_attach_generation) {
+ 		if (xiaomi_mca_cp_stop(mca, "physical disconnect"))
+ 			return;
++		xiaomi_mca_sync_usb_role(mca, USB_ROLE_DEVICE);
+ 		mca->auth_ok = false;
+ 		mca->mipps_attempted = false;
+ 		mca->cp = MCA_CP_OFF;
+@@ -4311,6 +4400,37 @@ static int xiaomi_mca_battery_ext_register(struct xiaomi_mca *mca)
  	return 0;
  }
  
@@ -179,7 +211,7 @@ index b96ea81c3..d0905f618 100644
  static int xiaomi_mca_probe(struct auxiliary_device *adev,
  			    const struct auxiliary_device_id *id)
  {
-@@ -4327,6 +4436,9 @@ static int xiaomi_mca_probe(struct auxiliary_device *adev,
+@@ -4327,6 +4447,9 @@ static int xiaomi_mca_probe(struct auxiliary_device *adev,
  	mca->charge_end = 100;
  	mca->piano_otg = of_device_is_compatible(dev->of_node, "xiaomi,piano-pmic-glink");
  	dev_set_drvdata(dev, mca);

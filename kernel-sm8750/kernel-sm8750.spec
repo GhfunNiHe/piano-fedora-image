@@ -140,6 +140,7 @@ fi
 - Follow the v1.2.0 kernel commit without adopting its release string
 - Merge the upstream flash and lockup detector configuration changes
 - Build with O3, Armv8.7-A and the LLVM Oryon scheduling model
+- Start xHCI for direct OTG insertion and restore device mode on UCSI detach
 
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-3.piano
 - Retry MiPPS in DFP when the initial UFP VDM query times out
