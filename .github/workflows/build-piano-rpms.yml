@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.2.0/piano-ubuntu-v1.2.0-packages.zip
-  PACKAGES_ZIP_SHA256: f3aa35c93d3963bee78794b06fb91a8b13bbeacf70f836e7042435dbfaddbf7a
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.2.1/piano-ubuntu-v1.2.1-packages.zip
+  PACKAGES_ZIP_SHA256: 82b5a9a02b995fd93f24f254cea079bebf0e1ca2aba9a757d2b1deb58ba1db32
 
 jobs:
   build:
@@ -113,9 +113,7 @@ jobs:
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
             gunyahvm/gunyahvm.spec \
-            piano-crosvm/piano-crosvm.spec \
-            piano-vm/piano-vm.spec \
-            piano-vm-windows/piano-vm-windows.spec; do
+            piano-vm/piano-vm.spec; do
             dnf builddep -y "$spec"
           done
 
@@ -130,9 +128,7 @@ jobs:
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
             gunyahvm/gunyahvm.spec \
-            piano-crosvm/piano-crosvm.spec \
-            piano-vm/piano-vm.spec \
-            piano-vm-windows/piano-vm-windows.spec; do
+            piano-vm/piano-vm.spec; do
             TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
               --define "_topdir $HOME/rpmbuild" "$spec"
           done

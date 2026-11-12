@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           gunyahvm
-Version:        1.0.1
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Linux and Windows virtual machines on Qualcomm Gunyah
 License:        GPL-2.0-only AND MIT AND BSD-2-Clause-Patent AND Apache-2.0
@@ -199,6 +199,9 @@ for process in Path('/proc').glob('[0-9]*'):
 PY
 
 %changelog
+* Thu Nov 12 2026 Piano RPM template <noreply@localhost> - 1.1.0-1
+- Update the application, runtime and guest payloads to GunyahVM 1.1.0
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.0.1-1
 - Convert GunyahVM 1.0.1 application, runtime, guest kernel and guest Mesa
 
