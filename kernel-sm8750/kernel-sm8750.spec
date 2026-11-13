@@ -2,27 +2,29 @@
 %global debug_package %{nil}
 
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
-%global KERNEL_VER 7.2.15
-%global KERNEL_COMMIT ff6cf0aafb8fd28c464c90e6fe9419960911f3a6
-%global KERNEL_SHORT ff6cf0a
+%global KERNEL_VER 7.4.0-rc2
+%global KERNEL_RPM_VER 7.4.0~rc2
+%global KERNEL_COMMIT 29eda7337ed1af7316ea93ea73465b10f8ebeaff
+%global KERNEL_SHORT 29eda73
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
-Version:        %{KERNEL_VER}
-Release:        4.piano%{?dist}
+Version:        %{KERNEL_RPM_VER}
+Release:        1.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
+# Exact config shipped in the v1.3.1 compiled linux-image package.
 Source1:        piano-kernel.config
-# Extracted from xiaomipad-8pro-mainline linux-image-7.2.15-piano64;
-# see piano-boot.dtb.provenance.json.
-Source2:        piano-boot.dtb
-Source3:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
+Source2:        extra-kernel.config
+# Extracted from v1.3.1 boot asset; see piano-boot.dtb.provenance.json.
+Source3:        piano-boot.dtb
+Source4:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
 Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
@@ -40,20 +42,16 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The 7.2.15 SM8750 piano kernel built from the v1.1.1 linux-sm8750-piano
-commit with the locally maintained qbootctl configuration. The package
-installs the Image, modules, piano-boot.dtb and the matching v4l2loopback
-module. On a real system the package runs dracut and the piano-local updater
-after installation.
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.3.1 source commit. It
+starts from the config in the compiled upstream kernel package and applies
+the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
+UFS BSG settings. The package installs the matching piano boot DTB and
+v4l2loopback module.
 
 %prep
 %autosetup -p1 -n linux-sm8750-piano-%{KERNEL_COMMIT}
 cp %{SOURCE1} .config
-
-# The configuration is intentionally local and exact. Do not replace it with
-# defconfig or the repository's release fragments.
-grep -Fxq 'CONFIG_LOCALVERSION=""' .config
-grep -Fxq '# CONFIG_LOCALVERSION_AUTO is not set' .config
+cp %{SOURCE2} extra-kernel.config
 
 %build
 export KCFLAGS="%{PIANO_KCFLAGS}"
@@ -64,23 +62,23 @@ export CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR:-true}"
 export KBUILD_BUILD_USER=piano
 export KBUILD_BUILD_HOST=mainline
 
-make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION="%{KERNEL_LOCALVERSION}" olddefconfig
-make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION="%{KERNEL_LOCALVERSION}" -j%{?_smp_build_ncpus} Image modules dtbs
+./scripts/kconfig/merge_config.sh -m -O "$PWD" .config extra-kernel.config
+./scripts/config --file .config --set-str LOCALVERSION "%{KERNEL_LOCALVERSION}" --disable LOCALVERSION_AUTO
+make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= olddefconfig
+make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= -j%{?_smp_build_ncpus} Image modules dtbs
 
 test "$(cat include/config/kernel.release)" = "%{KERNEL_RELEASE}"
 grep -F 'Linux version %{KERNEL_RELEASE} ' arch/arm64/boot/Image >/dev/null
 
-tar -xzf %{SOURCE3}
+tar -xzf %{SOURCE4}
 KERNEL_DIR="$PWD" KERNELRELEASE="%{KERNEL_RELEASE}" \
     CC="ccache clang" LLVM=1 LLVM_IAS=1 \
     make -C v4l2loopback-0.15.4 v4l2loopback.ko
 
 %install
 release=%{KERNEL_RELEASE}
-make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 \
-    LOCALVERSION="%{KERNEL_LOCALVERSION}" INSTALL_MOD_PATH=%{buildroot} INSTALL_MOD_STRIP=1 \
+make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= \
+    INSTALL_MOD_PATH=%{buildroot} INSTALL_MOD_STRIP=1 \
     KERNELRELEASE="$release" modules_install
 
 rm -rf %{buildroot}/lib/modules/$release/build \
@@ -101,7 +99,7 @@ install -Dm644 System.map \
 install -Dm644 .config \
     %{buildroot}/boot/config-$release
 
-install -Dm644 %{SOURCE2} \
+install -Dm644 %{SOURCE3} \
     %{buildroot}/usr/lib/linux-image-$release/piano-boot.dtb
 for dtb in sm8750-xiaomi-piano.dtb sm8750-xiaomi-piano-desktop.dtb; do
     install -Dm644 "arch/arm64/boot/dts/qcom/$dtb" \
@@ -136,6 +134,11 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-1.piano
+- Update to the v1.3.1 kernel source commit and matching boot DTB
+- Start from the compiled upstream kernel config with requested feature overrides
+- Use release string 7.4.0-rc2-sm8750-g29eda73
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 7.2.15-4.piano
 - Follow the v1.2.0 kernel commit without adopting its release string
 - Merge the upstream flash and lockup detector configuration changes

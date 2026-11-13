@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-sensors
-Version:        0.1+20261110.1
+Version:        0.1+20261112.1
 Release:        1%{?dist}
 Summary:        Qualcomm ADSP sensor service and configuration for Piano
 License:        GPL-3.0-or-later AND LicenseRef-Proprietary
@@ -11,7 +11,7 @@ Source0:        %{name}-payload.tar.gz
 Source1:        piano-sensors-iio-sensor-proxy.conf
 BuildRequires:  patchelf systemd-rpm-macros
 Requires:       python3 systemd systemd-udev
-Requires:       iio-sensor-proxy-ssc = 3.9+piano20261110.1
+Requires:       iio-sensor-proxy-ssc = 3.9+piano20261112.1
 Conflicts:      hexagonrpc hexagonrpcd
 
 %description
@@ -74,6 +74,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261112.1-1
+- Update the sensor service and fix shutdown during stop or restart
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 0.1+20261110.1-1
 - Update to the v1.2.0 sensor service and configuration payload
 

@@ -53,8 +53,8 @@ jobs:
         run: |
           set -euxo pipefail
           install -m0644 kernel-sm8750/piano-kernel.config \
-            "$HOME/rpmbuild/SOURCES/"
-          install -m0644 kernel-sm8750/piano-boot.dtb \
+            kernel-sm8750/extra-kernel.config \
+            kernel-sm8750/piano-boot.dtb \
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 kernel-sm8750/0001-xiaomi-mca-retry-mipps-in-dfp.patch \
             "$HOME/rpmbuild/SOURCES/"

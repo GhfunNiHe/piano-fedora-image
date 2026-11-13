@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           gunyahvm
-Version:        1.1.0
+Version:        1.2.0
 Release:        1%{?dist}
 Summary:        Linux and Windows virtual machines on Qualcomm Gunyah
 License:        GPL-2.0-only AND MIT AND BSD-2-Clause-Patent AND Apache-2.0
@@ -14,6 +14,7 @@ Source3:        gunyahvm-guest-mesa-payload.tar.gz
 BuildRequires:  systemd-rpm-macros
 Requires:       gunyahvm-runtime
 Requires:       python3 python3-gobject python3-dbus gtk4 libadwaita
+Requires:       libcasilda-1.0 gir1.2-casilda-1.0
 Requires:       ca-certificates qemu-img e2fsprogs zstd genisoimage
 Requires:       openssh-clients NetworkManager dnsmasq iproute polkit
 Requires:       systemd systemd-udev kmod util-linux
@@ -81,6 +82,8 @@ cp -a guest-mesa/payload/. %{buildroot}/
 %{_tmpfilesdir}/gunyahvm-memory.conf
 %{_udevrulesdir}/73-gunyahvm.rules
 %{_datadir}/applications/io.github.yzddmr6.GunyahVM.desktop
+%{_datadir}/dbus-1/services/io.github.yzddmr6.GunyahVM.service
+%{_datadir}/locale/zh_CN/LC_MESSAGES/gunyahvm.mo
 %dir %{_datadir}/gunyahvm
 %dir %{_datadir}/gunyahvm/crosvm
 %dir %{_datadir}/gunyahvm/guest
@@ -199,6 +202,9 @@ for process in Path('/proc').glob('[0-9]*'):
 PY
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.2.0-1
+- Update GunyahVM application and runtime to v1.2.0
+
 * Thu Nov 12 2026 Piano RPM template <noreply@localhost> - 1.1.0-1
 - Update the application, runtime and guest payloads to GunyahVM 1.1.0
 

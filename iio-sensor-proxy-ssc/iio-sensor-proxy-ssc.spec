@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           iio-sensor-proxy-ssc
-Version:        3.9+piano20261110.1
+Version:        3.9+piano20261112.1
 Release:        1%{?dist}
 Summary:        IIO sensor proxy with Qualcomm SSC support
 License:        GPL-3.0-or-later
@@ -92,6 +92,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 3.9+piano20261112.1-1
+- Update the v1.3.0 sensor proxy payload
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 3.9+piano20261110.1-1
 - Update to the v1.2.0 sensor proxy payload
 - Install the piano-sensors-check helper

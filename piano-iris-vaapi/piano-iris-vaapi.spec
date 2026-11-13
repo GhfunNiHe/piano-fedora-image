@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           piano-iris-vaapi
-Version:        0.1.0+git.f587b14
-Release:        0piano4.1%{?dist}
+Version:        0.2.0
+Release:        0piano1%{?dist}
 Summary:        Qualcomm Iris V4L2 VA-API decoder
 License:        MIT AND LGPL-2.1-only AND GPL-2.0-only
 URL:            https://github.com/phxinyang/qualcomm-iris-vaapi
@@ -48,5 +48,8 @@ cp -a usr/share/doc/piano-iris-vaapi/. %{buildroot}%{_datadir}/doc/%{name}/
 %{_libdir}/dri/msm_drv_video.so
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.2.0-0piano1
+- Update the Iris hardware decoder payload to v1.3.0
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 0.1.0+git.f587b14-0piano4.1
 - Initial binary conversion template

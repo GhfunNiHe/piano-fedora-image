@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.2.0.1
+Version:        1.3.0.3
 Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
@@ -20,7 +20,7 @@ BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl qbootctl
-Requires:       xiaomi-piano-firmware >= 0.6+os3.0.303.0
+Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
 Recommends:     openssh-server
 Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 
@@ -146,6 +146,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.3.0.3-1
+- Add zstd level 19 initramfs compression and package CDSP firmware into initramfs
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.2.0.1-1
 - Update to the v1.2.0 device support payload
 - Retire the old default USB debug console

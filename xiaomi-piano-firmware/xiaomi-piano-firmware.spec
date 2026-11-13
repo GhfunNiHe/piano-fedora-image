@@ -2,7 +2,7 @@
 %global _firmwaredir %{_prefix}/lib/firmware
 
 Name:           xiaomi-piano-firmware
-Version:        0.6+os3.0.303.0
+Version:        0.7+os3.0.303.0
 Release:        1%{?dist}
 Summary:        Firmware for Xiaomi Pad 8 Pro (piano)
 License:        LicenseRef-Proprietary-Firmware
@@ -42,5 +42,8 @@ install -Dm644 usr/share/doc/piano-local-firmware/inputs.json \
 %{_firmwaredir}/qcom
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.7+os3.0.303.0-1
+- Include the CDSP compute images and their split segments
+
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 0.6+os3.0.303.0-1
 - Convert piano-local-firmware to xiaomi-piano-firmware

@@ -8,14 +8,16 @@ on:
       - "iio-sensor-proxy-ssc/**"
       - "xiaomi-piano-firmware/**"
       - "gunyahvm/**"
+      - "casilda/**"
+      - "qcom-npu/**"
       - ".github/workflows/build-piano-rpms.yml"
 
 permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.2.1/piano-ubuntu-v1.2.1-packages.zip
-  PACKAGES_ZIP_SHA256: 82b5a9a02b995fd93f24f254cea079bebf0e1ca2aba9a757d2b1deb58ba1db32
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.3.0/piano-ubuntu-v1.3.0-packages.zip
+  PACKAGES_ZIP_SHA256: 793c819661b2ed9c927a2eaceb2e182ca008fd6e498601f5473dcb67f8e0acea
 
 jobs:
   build:
@@ -83,6 +85,11 @@ jobs:
           stage_deb gunyahvm-runtime gunyahvm-runtime
           stage_deb gunyahvm-guest-kernel gunyahvm-guest-kernel
           stage_deb gunyahvm-guest-mesa gunyahvm-guest-mesa
+          stage_deb libcasilda-1.0 libcasilda-1.0
+          stage_deb gir1.2-casilda-1.0 gir1.2-casilda-1.0
+          stage_deb piano-npu-firmware piano-npu-firmware
+          stage_deb qcom-npu-runtime qcom-npu-runtime
+          stage_deb qcom-npu-demo-model qcom-npu-demo-model
 
           install -m0644 piano-sensors/iio-sensor-proxy.service.d/piano.conf \
             "$HOME/rpmbuild/SOURCES/piano-sensors-iio-sensor-proxy.conf"
@@ -113,6 +120,8 @@ jobs:
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
             gunyahvm/gunyahvm.spec \
+            casilda/casilda.spec \
+            qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do
             dnf builddep -y "$spec"
           done
@@ -128,6 +137,8 @@ jobs:
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
             gunyahvm/gunyahvm.spec \
+            casilda/casilda.spec \
+            qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do
             TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
               --define "_topdir $HOME/rpmbuild" "$spec"
