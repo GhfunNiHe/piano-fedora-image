@@ -26,6 +26,7 @@ Source2:        extra-kernel.config
 Source3:        piano-boot.dtb
 Source4:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
 Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
+Patch0002:      0002-asoc-reset-runtime-component-count.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
 BuildRequires:  gcc hostname kmod lld llvm make openssl-devel perl-interpreter

@@ -1,0 +1,13 @@
+diff --git a/sound/soc/soc-core.c b/sound/soc/soc-core.c
+index 68b54e509..49a4dc785 100644
+--- a/sound/soc/soc-core.c
++++ b/sound/soc/soc-core.c
+@@ -387,6 +387,8 @@ static struct snd_soc_pcm_runtime *soc_new_pcm_runtime(
+ 		device_unregister(dev);
+ 		return NULL;
+ 	}
++	/* The flex allocator sets this to capacity; additions need a live count. */
++	rtd->num_components = 0;
+ 
+ 	rtd->dev = dev;
+ 	INIT_LIST_HEAD(&rtd->list);
