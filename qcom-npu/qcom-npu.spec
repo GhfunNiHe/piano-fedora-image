@@ -1,8 +1,11 @@
 %global debug_package %{nil}
 
+# These are linker-only capabilities incorrectly inferred from bundled DSP ELF files.
+%global __requires_exclude ^(libc[.]so|libgcc[.]so)$
+
 Name:           qcom-npu-runtime
 Version:        0.1+git20261112.e1f7593
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Qualcomm Hexagon v79 FastRPC and local NPU demo runtime
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -22,6 +25,7 @@ CPU/NPU demo. The NPU firmware is shipped in a separate device-specific package.
 Summary:        Stock Hexagon DSP firmware for Xiaomi Pad 8 Pro
 License:        LicenseRef-Proprietary-Firmware
 BuildArch:      noarch
+AutoReqProv:    no
 Provides:       qcom-npu-dsp
 Provides:       piano-npu-firmware = %{version}-%{release}
 Obsoletes:      piano-npu-firmware <= %{version}-%{release}
@@ -93,5 +97,9 @@ ldconfig
 %{_datadir}/qcom-npu/Qwen3-0.6B-Q4_0.gguf
 
 %changelog
+* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+git20261112.e1f7593-6
+- Stop treating Hexagon DSP runtime files as Fedora host library dependencies
+- Filter link-time libc.so and libgcc.so requirements from the runtime package
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+git20261112.e1f7593-5
 - Package the NPU runtime, stock DSP firmware and matching offline demo model
