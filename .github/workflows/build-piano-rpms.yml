@@ -93,11 +93,11 @@ jobs:
 
           install -m0644 piano-sensors/iio-sensor-proxy.service.d/piano.conf \
             "$HOME/rpmbuild/SOURCES/piano-sensors-iio-sensor-proxy.conf"
-          install -m0755 piano-device-support/zz-piano-boot \
+          install -m0755 piano-switch-slot/zz-piano-boot \
             "$HOME/rpmbuild/SOURCES/zz-piano-boot"
-          install -m0755 piano-device-support/zz-piano-boot-postrm \
+          install -m0755 piano-switch-slot/zz-piano-boot-postrm \
             "$HOME/rpmbuild/SOURCES/zz-piano-boot-postrm"
-          install -m0755 piano-device-support/piano-local-update \
+          install -m0755 piano-switch-slot/piano-local-update \
             "$HOME/rpmbuild/SOURCES/piano-local-update"
           install -m0755 piano-switch-slot/sta \
             "$HOME/rpmbuild/SOURCES/sta"

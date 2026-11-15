@@ -73,3 +73,61 @@
                  '--profile', str(config / 'boot-profile.json'), *root_option,
                  '--mkbootimg', str(tools / 'mkbootimg.py'),
                  '--avbtool', str(tools / 'avbtool.py'),
+--- a/etc/kernel/postinst.d/zz-piano-boot
++++ b/etc/kernel/postinst.d/zz-piano-boot
+@@ -1,15 +1,34 @@
+ #!/bin/sh
+ # SPDX-License-Identifier: GPL-2.0-only
+ set -eu
+-# Only unique releases (<version>-piano<ABI>) own the boot image set. The legacy
+-# 7.2.6-piano+ sorts above them in linux-version and must not take it back.
+-case "${1:-}" in *-piano[0-9]*) ;; *) exit 0;; esac
++# Fedora's Piano kernel uses -sm8750-g<commit> and dracut's initramfs name.
++# Keep the upstream image-set updater, selecting the newest Piano initramfs.
++case "${1:-}" in *-piano[0-9]*|*-sm8750-g*) ;; *) exit 0;; esac
+ [ -e /etc/piano/layout.json ] || exit 0
+-[ -e "/boot/initrd.img-$1" ] || exit 0
+-# As flash-kernel does, only the newest installed piano kernel is written.
+-latest=$(linux-version list | grep -E -- '-piano[0-9]+$' | linux-version sort | tail -n 1)
++[ -e "/boot/initramfs-$1.img" ] || [ -e "/boot/initrd.img-$1" ] || exit 0
++latest=
++latest_initrd=
++for initrd in /boot/initramfs-*.img /boot/initrd.img-*; do
++    [ -e "$initrd" ] || continue
++    case "$initrd" in
++        /boot/initramfs-*.img)
++            candidate=${initrd##*/initramfs-}
++            candidate=${candidate%.img}
++            ;;
++        /boot/initrd.img-*)
++            candidate=${initrd##*/initrd.img-}
++            ;;
++    esac
++    case "$candidate" in *-piano[0-9]*|*-sm8750-g*) ;; *) continue;; esac
++    [ -e "/boot/vmlinuz-$candidate" ] || continue
++    [ -e "/usr/lib/linux-image-$candidate/piano-boot.dtb" ] || continue
++    if [ -z "$latest_initrd" ] || [ "$initrd" -nt "$latest_initrd" ]; then
++        latest=$candidate
++        latest_initrd=$initrd
++    fi
++done
+ if [ "$1" != "$latest" ]; then
+-	echo "zz-piano-boot: $1 is older than $latest; boot image set unchanged" >&2
+-	exit 0
++    echo "zz-piano-boot: $1 is older than $latest; boot image set unchanged" >&2
++    exit 0
+ fi
+ exec /usr/sbin/piano-boot-update "$1"
+--- a/etc/kernel/postrm.d/zz-piano-boot
++++ b/etc/kernel/postrm.d/zz-piano-boot
+@@ -1,8 +1,7 @@
+ #!/bin/sh
+ # SPDX-License-Identifier: GPL-2.0-only
+ set -eu
+-# A removed piano kernel (including the legacy 7.2.6-piano+) must not stay in
+-# the boot image set or the rollback set.
+-case "${1:-}" in *-piano*) ;; *) exit 0;; esac
++# A removed Piano kernel must not remain in the boot or rollback image set.
++case "${1:-}" in *-piano*|*-sm8750-g*) ;; *) exit 0;; esac
+ [ -e /etc/piano/layout.json ] || exit 0
+ exec /usr/sbin/piano-boot-update --removed "$1"

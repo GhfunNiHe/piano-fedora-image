@@ -2,7 +2,7 @@
 
 Name:           piano-switch-slot
 Version:        1.4.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano local boot image hook and A/B slot switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -32,6 +32,10 @@ install -Dm755 %{SOURCE3} %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 install -Dm755 %{SOURCE4} %{buildroot}%{_sbindir}/sta
 install -d %{buildroot}%{_prefix}/lib/piano
 cp -a usr/lib/piano/boot %{buildroot}%{_prefix}/lib/piano/
+# The slot scheme uses only the common image builder, not the upstream
+# slot-A switch implementation.
+rm -f %{buildroot}%{_prefix}/lib/piano/boot/piano_bootslot.py
+rm -f %{buildroot}%{_prefix}/lib/piano/boot/switch-common.sh
 install -Dm644 usr/share/doc/piano-device-support/copyright \
     %{buildroot}%{_datadir}/doc/%{name}/copyright
 install -Dm644 usr/share/doc/piano-device-support/NOTICE \
@@ -47,5 +51,8 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %{_sbindir}/sta
 
 %changelog
+* Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-2
+- Keep local hooks with the slot package and omit unused upstream switch helpers
+
 * Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-1
 - Split the local kernel hook from device support and add sta slot switching

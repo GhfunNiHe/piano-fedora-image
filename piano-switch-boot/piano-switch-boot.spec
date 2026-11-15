@@ -2,14 +2,12 @@
 
 Name:           piano-switch-boot
 Version:        1.4.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano upstream boot image sets and system switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        piano-device-support-payload.tar.gz
-Source1:        zz-piano-boot
-Source2:        zz-piano-boot-postrm
 Patch0:         fedora-boot-compat.patch
 BuildRequires:  patch
 BuildRequires:  systemd-rpm-macros
@@ -27,8 +25,8 @@ with the kernel release and initramfs paths adapted to Fedora.
 :
 
 %install
-install -Dm755 %{SOURCE1} %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
-install -Dm755 %{SOURCE2} %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
+install -Dm755 etc/kernel/postinst.d/zz-piano-boot %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
+install -Dm755 etc/kernel/postrm.d/zz-piano-boot %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 install -d %{buildroot}%{_prefix}/lib/piano
 cp -a usr/lib/piano/boot %{buildroot}%{_prefix}/lib/piano/
 for name in piano-boot-update piano-boot-switch piano-slot-success; do
@@ -74,6 +72,9 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %systemd_postun_with_restart piano-slot-success.service piano-emergency-android.service
 
 %changelog
+* Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-2
+- Package upstream hook wrappers with Fedora kernel naming compatibility
+
 * Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-1
 - Split upstream boot image set manager and system switch from device support
 - Adapt Fedora kernel release and initramfs paths
