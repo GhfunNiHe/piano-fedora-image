@@ -1,0 +1,75 @@
+--- a/usr/sbin/piano-boot-update
++++ b/usr/sbin/piano-boot-update
+@@ -55,13 +55,27 @@
+     return match[1].decode() if match else None
+ 
+ 
+-def newest_piano_release(run):
+-    listed = run(['linux-version', 'list'], capture_output=True, text=True, check=True).stdout.split()
+-    piano = [r for r in listed if re.fullmatch(r'[0-9][A-Za-z0-9.]*-piano[0-9]+', r)]
+-    if not piano:
+-        return None
+-    return run(['linux-version', 'sort'], input='\n'.join(piano) + '\n', capture_output=True,
+-               text=True, check=True).stdout.split()[-1]
++def is_piano_release(release):
++    return re.fullmatch(r'[0-9][A-Za-z0-9.+-]*-(?:piano[0-9]+|sm8750-g[0-9a-f]+)', release) is not None
++
++
++def initrd_path(root, release):
++    for name in (f'boot/initramfs-{release}.img', f'boot/initrd.img-{release}'):
++        path = root / name
++        if path.is_file():
++            return path
++    return None
++
++
++def newest_piano_release(run, root=Path('/')):
++    candidates = []
++    for kernel in (root / 'boot').glob('vmlinuz-*'):
++        release = kernel.name.removeprefix('vmlinuz-')
++        initrd = initrd_path(root, release)
++        if (is_piano_release(release) and initrd and
++                (root / f'usr/lib/linux-image-{release}/piano-boot.dtb').is_file()):
++            candidates.append((initrd.stat().st_mtime_ns, release))
++    return max(candidates)[1] if candidates else None
+ 
+ 
+ def removed(release, root, run):
+@@ -69,8 +83,8 @@
+     if not store.is_dir():
+         return 0
+     if (store / 'ubuntu').is_dir() and set_release(store / 'ubuntu') == release:
+-        latest = newest_piano_release(run)
+-        if latest and (root / f'boot/initrd.img-{latest}').exists():
++        latest = newest_piano_release(run, root)
++        if latest and initrd_path(root, latest):
+             print(f'{release} owned the boot image set; rebuilding it for {latest}')
+             main(['piano-boot-update', latest], root, run)
+         else:
+@@ -106,12 +120,15 @@
+ 
+ def main(argv, root=Path('/'), run=subprocess.run):
+     if argv[1:2] == ['--removed'] and len(argv) == 3:
+-        if not re.fullmatch(r'[0-9][A-Za-z0-9.+-]*-piano[A-Za-z0-9.+-]*', argv[2]):
++        if not is_piano_release(argv[2]):
+             raise SystemExit('Not a piano kernel release')
+         return removed(argv[2], root, run)
+     release = argv[1] if len(argv) > 1 else ''
+-    if not re.fullmatch(r'[0-9][A-Za-z0-9.+-]*-piano[A-Za-z0-9.+-]*', release):
++    if not is_piano_release(release):
+         raise SystemExit('Not a piano kernel release')
++    initrd = initrd_path(root, release)
++    if initrd is None:
++        raise SystemExit(f'No initramfs for {release}')
+     config = root / 'etc/piano'
+     layout = json.loads((config / 'layout.json').read_text())
+     if 'root_partlabel' in layout:
+@@ -142,7 +159,7 @@
+                 'python3', str(tools / 'build-persistent-boot.py'),
+                 '--kernel', str(root / f'boot/vmlinuz-{release}'), '--kernel-release', release,
+                 '--dtb', str(root / f'usr/lib/linux-image-{release}/piano-boot.dtb'),
+-                '--initrd', str(root / f'boot/initrd.img-{release}'),
++                '--initrd', str(initrd),
+                 '--profile', str(config / 'boot-profile.json'), *root_option,
+                 '--mkbootimg', str(tools / 'mkbootimg.py'),
+                 '--avbtool', str(tools / 'avbtool.py'),

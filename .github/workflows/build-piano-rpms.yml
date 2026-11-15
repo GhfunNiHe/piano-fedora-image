@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.3.0/piano-ubuntu-v1.3.0-packages.zip
-  PACKAGES_ZIP_SHA256: 793c819661b2ed9c927a2eaceb2e182ca008fd6e498601f5473dcb67f8e0acea
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.4.0/piano-ubuntu-v1.4.0-packages.zip
+  PACKAGES_ZIP_SHA256: f7cbe3f60d06c8c525c3d86efe85ad4d690fabb996b943ac81a6996652c67f7d
 
 jobs:
   build:
@@ -99,6 +99,10 @@ jobs:
             "$HOME/rpmbuild/SOURCES/zz-piano-boot-postrm"
           install -m0755 piano-device-support/piano-local-update \
             "$HOME/rpmbuild/SOURCES/piano-local-update"
+          install -m0755 piano-switch-slot/sta \
+            "$HOME/rpmbuild/SOURCES/sta"
+          install -m0644 piano-switch-boot/fedora-boot-compat.patch \
+            "$HOME/rpmbuild/SOURCES/fedora-boot-compat.patch"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
             "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro.conf"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro-HiFi.conf \
@@ -119,6 +123,8 @@ jobs:
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
+            piano-switch-slot/piano-switch-slot.spec \
+            piano-switch-boot/piano-switch-boot.spec \
             gunyahvm/gunyahvm.spec \
             casilda/casilda.spec \
             qcom-npu/qcom-npu.spec \
@@ -136,6 +142,8 @@ jobs:
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
             piano-device-support/piano-device-support.spec \
+            piano-switch-slot/piano-switch-slot.spec \
+            piano-switch-boot/piano-switch-boot.spec \
             gunyahvm/gunyahvm.spec \
             casilda/casilda.spec \
             qcom-npu/qcom-npu.spec \

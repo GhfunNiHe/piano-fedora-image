@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-camerad
-Version:        0.1+20261109.1
+Version:        0.1+20261113.1
 Release:        1%{?dist}
 Summary:        Piano camera capture daemon and WirePlumber integration
 License:        MIT
@@ -37,6 +37,7 @@ cp -a usr/. %{buildroot}%{_prefix}/
 %{_prefix}/lib/piano/piano-camera-light-off
 %{_prefix}/sbin/piano-camera-test
 %{_bindir}/piano-camera
+%{_bindir}/piano-camera-ctl
 %{_unitdir}/piano-camerad.service
 %{_datadir}/applications/io.github.yzddmr6.PianoCamera.desktop
 %{_datadir}/wireplumber/wireplumber.conf.d/50-piano-camera.conf
@@ -52,6 +53,9 @@ cp -a usr/. %{buildroot}%{_prefix}/
 %systemd_postun_with_restart piano-camerad.service
 
 %changelog
+* Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261113.1-1
+- Update camera payload and package piano-camera-ctl
+
 * Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 0.1+20261109.1-1
 - Update to the v1.2.0 camera daemon payload
 - Add the GTK photo application and torch cleanup hook

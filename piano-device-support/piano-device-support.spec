@@ -1,34 +1,31 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.3.0.3
-Release:        1%{?dist}
+Version:        1.4.0
+Release:        7%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        %{name}-payload.tar.gz
-Source1:        zz-piano-boot
-Source2:        piano-local-update
-Source3:        zz-piano-boot-postrm
-Source4:        Xiaomi-Pad-8-Pro.conf
-Source5:        Xiaomi-Pad-8-Pro-HiFi.conf
-Source6:        Piano-Capture-Diag.conf
-Source7:        Piano-Capture-Diag-HiFi.conf
-Source8:        50-piano-speaker-upmix.conf
+Source1:        Xiaomi-Pad-8-Pro.conf
+Source2:        Xiaomi-Pad-8-Pro-HiFi.conf
+Source3:        Piano-Capture-Diag.conf
+Source4:        Piano-Capture-Diag-HiFi.conf
+Source5:        50-piano-speaker-upmix.conf
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
+Requires:       v4l-utils
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
-Requires:       alsa-ucm dracut dtc gawk openssl qbootctl
+Requires:       alsa-ucm dracut dtc gawk openssl
 Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
 Recommends:     openssh-server
 Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 
 %description
 Runtime device support for the Xiaomi Pad 8 Pro: platform services, touch
-daemon, charging and Bluetooth helpers, power/sleep policy, developer mode,
-and the local kernel post-install hook that rebuilds and writes the current
-slot's boot image set through qbootctl.
+and pen support, infrared and charging helpers, power/sleep policy,
+and developer mode. Kernel boot policy is supplied by a separate hook package.
 
 %prep
 %autosetup -n payload
@@ -41,8 +38,8 @@ install -d %{buildroot}%{_prefix}
 cp -a usr/. %{buildroot}%{_prefix}/
 cp -a etc/. %{buildroot}/etc/
 
-# The kernel image hooks are replaced below. Keep the dracut module because
-# built-in remoteproc/display drivers probe before the persistent root exists.
+# Keep the dracut module because built-in remoteproc/display drivers probe
+# before the persistent root exists. Both optional hook packages own boot files.
 rm -f %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
 rm -f %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 rm -f %{buildroot}/etc/initramfs/post-update.d/zz-piano-boot
@@ -50,7 +47,7 @@ rm -f %{buildroot}%{_prefix}/sbin/piano-boot-update
 rm -f %{buildroot}%{_prefix}/sbin/piano-boot-switch
 rm -f %{buildroot}%{_prefix}/sbin/piano-slot-success
 rm -f %{buildroot}%{_libexecdir}/piano/piano-emergency-android
-rm -f %{buildroot}%{_prefix}/lib/piano/boot/piano_bootslot.py
+rm -rf %{buildroot}%{_prefix}/lib/piano/boot
 rm -f %{buildroot}%{_unitdir}/piano-slot-success.service
 rm -f %{buildroot}%{_unitdir}/piano-emergency-android.service
 rm -f %{buildroot}%{_datadir}/applications/piano-switch-to-android.desktop
@@ -63,33 +60,25 @@ rmdir %{buildroot}/etc/kernel 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs/post-update.d 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs 2>/dev/null || :
 
-# Replace the original updater at its existing path. The postinst/postrm
-# entries keep calling /usr/sbin/piano-boot-update.
-install -Dm755 %{SOURCE1} \
-    %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
-install -Dm755 %{SOURCE2} \
-    %{buildroot}%{_prefix}/sbin/piano-boot-update
-install -Dm755 %{SOURCE3} \
-    %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
-install -Dm644 %{SOURCE4} \
+install -Dm644 %{SOURCE1} \
     %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf
-install -Dm644 %{SOURCE5} \
+install -Dm644 %{SOURCE2} \
     %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/HiFi.conf
-install -Dm644 %{SOURCE6} \
+install -Dm644 %{SOURCE3} \
     %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf
-install -Dm644 %{SOURCE7} \
+install -Dm644 %{SOURCE4} \
     %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/HiFi.conf
 install -d %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750
 ln -s ../../Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf \
     %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Xiaomi-Pad-8-Pro.conf
 ln -s ../../Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf \
     %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Piano-Capture-Diag.conf
-install -Dm644 %{SOURCE8} \
+install -Dm644 %{SOURCE5} \
     %{buildroot}%{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
-install -Dm644 %{SOURCE8} \
+install -Dm644 %{SOURCE5} \
     %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
 
-# The switch store and its privileged UI are not part of this qbootctl setup.
+# Boot status is optional because the hook packages are separate.
 sed -i \
     -e "s/, 'piano-emergency-android.service'//" \
     -e "s/'piano-slot-success.service', //" \
@@ -103,8 +92,6 @@ sed -i \
 %config(noreplace) /etc/piano-network
 %config(noreplace) /etc/dracut.conf.d/90-piano.conf
 %config(noreplace) /etc/dracut.conf.d/91-piano-gunyah.conf
-/etc/kernel/postinst.d/zz-piano-boot
-/etc/kernel/postrm.d/zz-piano-boot
 %{_prefix}/lib/dracut/modules.d/99piano
 %{_datadir}/alsa/ucm2/Qualcomm/sm8750
 %{_datadir}/alsa/ucm2/conf.d/sm8750
@@ -113,26 +100,37 @@ sed -i \
 %{_bindir}/piano-check
 %{_libexecdir}/piano
 %{_prefix}/lib/piano
-%{_prefix}/sbin/piano-boot-update
 %{_prefix}/sbin/piano-devmode
 %{_prefix}/sbin/piano-reboot-bootloader
 %{_unitdir}
 %{_prefix}/lib/systemd/logind.conf.d
 %{_prefix}/lib/systemd/network
 %{_prefix}/lib/systemd/sleep.conf.d
+%{_prefix}/lib/systemd/system-sleep/tablet-charge-sample
+%{_prefix}/lib/systemd/user/tablet-charge-idle.service
+%{_prefix}/lib/systemd/user/org.gnome.SettingsDaemon.Power.target.d/50-tablet-charge-idle.conf
+%{_prefix}/libexec/tablet-charge-display
+%{_prefix}/libexec/tablet-charge-idle
+%{_prefix}/libexec/tablet-charge-sample
 %{_udevrulesdir}
 %{_sysusersdir}/piano-gunyah.conf
 %{_sysusersdir}/piano-pen.conf
+%{_datadir}/glib-2.0/schemas/95_tablet-charge.gschema.override
+%{_datadir}/glib-2.0/schemas/org.gnome.shell.extensions.tablet-charge.gschema.xml
+%{_datadir}/gnome-shell/extensions/charge-indicator@tablet-linux
+%{_datadir}/tablet-charge/device
+%{_datadir}/ubuntu/gnome-shell/modes/ubuntu.json
 %{_datadir}/piano/pen
 %{_datadir}/polkit-1/actions/io.github.piano.devmode.policy
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
 
 %post
+%systemd_post piano-debug-timeout.service piano-pen-radio.service tablet-charge-events.service tablet-charge-sample.timer
 if command -v systemctl >/dev/null 2>&1; then
     systemctl disable --now piano-debug.service >/dev/null 2>&1 || :
+    systemctl enable --now tablet-charge-events.service tablet-charge-sample.timer >/dev/null 2>&1 || :
 fi
 rm -f /etc/systemd/system/multi-user.target.wants/piano-debug.service
-%systemd_post piano-debug-timeout.service piano-pen-radio.service
 if command -v udevadm >/dev/null 2>&1; then
     udevadm control --reload-rules || :
     if [ -e /sys/class/misc/gunyah ]; then
@@ -140,12 +138,18 @@ if command -v udevadm >/dev/null 2>&1; then
     fi
 fi
 
+%preun
+%systemd_preun tablet-charge-events.service tablet-charge-sample.timer
+
 %postun
 if command -v udevadm >/dev/null 2>&1; then
     udevadm control --reload-rules || :
 fi
 
 %changelog
+* Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-7
+- Update device payload to v1.4.0 and move boot hooks into separate packages
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.3.0.3-1
 - Add zstd level 19 initramfs compression and package CDSP firmware into initramfs
 
