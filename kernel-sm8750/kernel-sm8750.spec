@@ -19,9 +19,9 @@ URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
-# Exact config shipped in the v1.3.1 compiled linux-image package.
+# Exact config shipped in the v1.4.0 compiled linux-image package.
 Source1:        piano-kernel.config
-Source2:        kernel-extra.config
+Source2:        extra-kernel.config
 # Stock Android inputs for assembling piano-boot.dtb; see stock/PROVENANCE.json.
 Source3:        stock-base.dtb
 Source4:        stock-overlay.dtbo
@@ -55,7 +55,7 @@ installs it with the v4l2loopback module.
 %prep
 %autosetup -p1 -n linux-sm8750-piano-%{KERNEL_COMMIT}
 cp %{SOURCE1} .config
-cp %{SOURCE2} kernel-extra.config
+cp %{SOURCE2} extra-kernel.config
 install -m0644 %{SOURCE3} stock-base.dtb
 install -m0644 %{SOURCE4} stock-overlay.dtbo
 install -m0755 %{SOURCE5} ufdt_apply_overlay
@@ -75,7 +75,7 @@ export CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR:-true}"
 export KBUILD_BUILD_USER=piano
 export KBUILD_BUILD_HOST=mainline
 
-./scripts/kconfig/merge_config.sh -m -O "$PWD" .config kernel-extra.config
+./scripts/kconfig/merge_config.sh -m -O "$PWD" .config extra-kernel.config
 ./scripts/config --file .config --set-str LOCALVERSION "%{KERNEL_LOCALVERSION}" --disable LOCALVERSION_AUTO
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= olddefconfig
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= -j%{?_smp_build_ncpus} Image modules dtbs
@@ -159,7 +159,7 @@ fi
 - Assemble piano-boot.dtb in the build from the stock base DTB, DTBO entry and
   ufdt_apply_overlay now shipped under stock/
 - Require python3-libfdt and stop shipping a prebuilt piano-boot.dtb
-- Rename extra-kernel.config to kernel-extra.config
+- Keep the override fragment named extra-kernel.config
 
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-1.piano
 - Update to the v1.3.1 kernel source commit and matching boot DTB
