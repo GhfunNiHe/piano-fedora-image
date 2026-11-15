@@ -4,8 +4,8 @@
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT 29eda7337ed1af7316ea93ea73465b10f8ebeaff
-%global KERNEL_SHORT 29eda73
+%global KERNEL_COMMIT 83f0f89bed14a0cb7d582a26e72bced0387870f4
+%global KERNEL_SHORT 83f0f89
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
@@ -25,7 +25,6 @@ Source2:        extra-kernel.config
 # Extracted from v1.3.1 boot asset; see piano-boot.dtb.provenance.json.
 Source3:        piano-boot.dtb
 Source4:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
-Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
@@ -43,7 +42,7 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.3.1 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.4.0 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
 UFS BSG settings. The package installs the matching piano boot DTB and
