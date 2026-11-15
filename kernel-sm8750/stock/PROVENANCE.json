@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "purpose": "Stock Android DTB/DTBO inputs for assembling piano-boot.dtb in the kernel-sm8750 RPM build",
+  "rom": "piano_images_OS4.0.5.0.XPYCNXM_20261021.0000.00_17.0_cn_c0c341fc72.tgz",
+  "partitions": {
+    "base_dtb": "vendor_boot.img",
+    "overlay": "dtbo.img"
+  },
+  "partition_sha256": {
+    "vendor_boot.img": "6eb05eabbea49b945708063c5ce6d2b70157e3828e9991da089b931202dee1dc",
+    "dtbo.img": "79981d4d85e847f527ffc10d3c49d85a29447e5f7f790579214414a4180a4f32"
+  },
+  "base_dtb": {
+    "file": "stock-base.dtb",
+    "sha256": "5f0f7f8a62b6d4a4129ba9e1a361337ebf3a68760c495071251e8e0603d783b9",
+    "selector": "qcom,msm-id = [0x100027f, 0x20000] and qcom,board-id = [0, 0]",
+    "offset_in_vendor_boot_dtb_section": "0x1f8460"
+  },
+  "overlay": {
+    "file": "stock-overlay.dtbo",
+    "sha256": "2bc5b424710c4d426ca5478aa060942faf4023cf64052004a41a71b5b7f3bc69",
+    "selector": "xiaomi,miboard-id = [9, 0]"
+  },
+  "ufdt_apply_overlay": {
+    "file": "ufdt_apply_overlay",
+    "sha256": "8d97cab2308921e11cd3c510efd5e73061311bef3e6160f31f3ffb332150419c",
+    "source": "AOSP platform/system/libufdt main tests/src/ufdt_overlay_test_app.c with platform/external/dtc main libfdt",
+    "build": "cc -O2 -Ilibufdt/include -Ilibufdt/sysdeps/include -Ilibufdt/tests/src -Idtc/libfdt libufdt/ufdt_*.c libufdt/sysdeps/libufdt_sysdeps_posix.c libufdt/tests/src/ufdt_overlay_test_app.c libufdt/tests/src/util.c dtc/libfdt/fdt*.c -o ufdt_apply_overlay"
+  },
+  "verification_reference": {
+    "asset": "piano-ubuntu-v1.3.1-boot.zip",
+    "file": "boot/piano-boot.dtb",
+    "result": "Same root identity, same 191 __symbols__ names and targets, same disabled /firmware/piano-stock-overlay node; the only extra nodes come from the newer mainline desktop DTB."
+  }
+}

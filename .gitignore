@@ -3,3 +3,4 @@
 *.tar.gz
 *.tar.zst
 __pycache__/
+kernel-sm8750/.work/

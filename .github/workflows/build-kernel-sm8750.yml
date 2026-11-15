@@ -53,8 +53,12 @@ jobs:
         run: |
           set -euxo pipefail
           install -m0644 kernel-sm8750/piano-kernel.config \
-            kernel-sm8750/extra-kernel.config \
-            kernel-sm8750/piano-boot.dtb \
+            kernel-sm8750/kernel-extra.config \
+            kernel-sm8750/stock/stock-base.dtb \
+            kernel-sm8750/stock/stock-overlay.dtbo \
+            kernel-sm8750/prepare-boot-dtb.py \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0755 kernel-sm8750/stock/ufdt_apply_overlay \
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 kernel-sm8750/0002-asoc-reset-runtime-component-count.patch \
             "$HOME/rpmbuild/SOURCES/"

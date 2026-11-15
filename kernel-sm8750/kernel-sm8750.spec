@@ -12,7 +12,7 @@
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        1.piano%{?dist}
+Release:        2.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
@@ -21,15 +21,18 @@ ExclusiveArch:  aarch64
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
 # Exact config shipped in the v1.3.1 compiled linux-image package.
 Source1:        piano-kernel.config
-Source2:        extra-kernel.config
-# Extracted from v1.3.1 boot asset; see piano-boot.dtb.provenance.json.
-Source3:        piano-boot.dtb
-Source4:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
+Source2:        kernel-extra.config
+# Stock Android inputs for assembling piano-boot.dtb; see stock/PROVENANCE.json.
+Source3:        stock-base.dtb
+Source4:        stock-overlay.dtbo
+Source5:        ufdt_apply_overlay
+Source6:        prepare-boot-dtb.py
+Source7:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
 BuildRequires:  gcc hostname kmod lld llvm make openssl-devel perl-interpreter
-BuildRequires:  python3 python3-devel python3-pyyaml
+BuildRequires:  python3 python3-devel python3-libfdt python3-pyyaml
 BuildRequires:  rust rust-src bindgen rustfmt clippy
 BuildRequires:  rsync tar which xz zstd
 
@@ -45,13 +48,23 @@ Requires:       dracut kmod qbootctl
 The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.4.0 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
-UFS BSG settings. The package installs the matching piano boot DTB and
-v4l2loopback module.
+UFS BSG settings. The package assembles the piano boot DTB from the freshly
+built desktop DTB and the stock Android base DTB/DTBO in stock/, then
+installs it with the v4l2loopback module.
 
 %prep
 %autosetup -p1 -n linux-sm8750-piano-%{KERNEL_COMMIT}
 cp %{SOURCE1} .config
-cp %{SOURCE2} extra-kernel.config
+cp %{SOURCE2} kernel-extra.config
+install -m0644 %{SOURCE3} stock-base.dtb
+install -m0644 %{SOURCE4} stock-overlay.dtbo
+install -m0755 %{SOURCE5} ufdt_apply_overlay
+install -m0644 %{SOURCE6} prepare-boot-dtb.py
+printf '%s  stock-base.dtb\n%s  stock-overlay.dtbo\n%s  ufdt_apply_overlay\n' \
+    5f0f7f8a62b6d4a4129ba9e1a361337ebf3a68760c495071251e8e0603d783b9 \
+    2bc5b424710c4d426ca5478aa060942faf4023cf64052004a41a71b5b7f3bc69 \
+    8d97cab2308921e11cd3c510efd5e73061311bef3e6160f31f3ffb332150419c \
+    | sha256sum -c -
 
 %build
 export KCFLAGS="%{PIANO_KCFLAGS}"
@@ -62,7 +75,7 @@ export CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR:-true}"
 export KBUILD_BUILD_USER=piano
 export KBUILD_BUILD_HOST=mainline
 
-./scripts/kconfig/merge_config.sh -m -O "$PWD" .config extra-kernel.config
+./scripts/kconfig/merge_config.sh -m -O "$PWD" .config kernel-extra.config
 ./scripts/config --file .config --set-str LOCALVERSION "%{KERNEL_LOCALVERSION}" --disable LOCALVERSION_AUTO
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= olddefconfig
 make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= -j%{?_smp_build_ncpus} Image modules dtbs
@@ -70,7 +83,15 @@ make ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 LOCALVERSION= -j%{?_smp_buil
 test "$(cat include/config/kernel.release)" = "%{KERNEL_RELEASE}"
 grep -F 'Linux version %{KERNEL_RELEASE} ' arch/arm64/boot/Image >/dev/null
 
-tar -xzf %{SOURCE4}
+rm -rf boot-dtb
+python3 prepare-boot-dtb.py \
+    --mainline-dtb arch/arm64/boot/dts/qcom/sm8750-xiaomi-piano-desktop.dtb \
+    --stock-base stock-base.dtb \
+    --stock-overlay stock-overlay.dtbo \
+    --ufdt "$PWD/ufdt_apply_overlay" \
+    --output boot-dtb
+
+tar -xzf %{SOURCE7}
 KERNEL_DIR="$PWD" KERNELRELEASE="%{KERNEL_RELEASE}" \
     CC="ccache clang" LLVM=1 LLVM_IAS=1 \
     make -C v4l2loopback-0.15.4 v4l2loopback.ko
@@ -99,7 +120,7 @@ install -Dm644 System.map \
 install -Dm644 .config \
     %{buildroot}/boot/config-$release
 
-install -Dm644 %{SOURCE3} \
+install -Dm644 boot-dtb/piano-boot.dtb \
     %{buildroot}/usr/lib/linux-image-$release/piano-boot.dtb
 for dtb in sm8750-xiaomi-piano.dtb sm8750-xiaomi-piano-desktop.dtb; do
     install -Dm644 "arch/arm64/boot/dts/qcom/$dtb" \
@@ -134,6 +155,12 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-2.piano
+- Assemble piano-boot.dtb in the build from the stock base DTB, DTBO entry and
+  ufdt_apply_overlay now shipped under stock/
+- Require python3-libfdt and stop shipping a prebuilt piano-boot.dtb
+- Rename extra-kernel.config to kernel-extra.config
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-1.piano
 - Update to the v1.3.1 kernel source commit and matching boot DTB
 - Start from the compiled upstream kernel config with requested feature overrides
