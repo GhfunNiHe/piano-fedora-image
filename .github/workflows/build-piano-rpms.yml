@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "piano-*/**"
+      - "gunyahvm-*/**"
       - "iio-sensor-proxy-ssc/**"
       - "xiaomi-piano-firmware/**"
       - "gunyahvm/**"
@@ -18,6 +19,8 @@ permissions:
 env:
   PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.4.1/piano-ubuntu-v1.4.1-packages.zip
   PACKAGES_ZIP_SHA256: ddbd29a8ccb979dd4f5568c195a1eb0349b92725c8038fcaef3fc4c4f4102ed1
+  GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.3.0/gunyahvm-1.3.0-source.tar.zst
+  GUNYAHVM_SOURCE_SHA256: 0e580ddaea3274614d2d8f2b29c46541936807de662d0a0be84ac7f0776a6d49
 
 jobs:
   build:
@@ -47,6 +50,11 @@ jobs:
           curl --fail --location --retry 3 --output /tmp/piano-packages.zip \
             "$PACKAGES_ZIP_URL"
           echo "$PACKAGES_ZIP_SHA256  /tmp/piano-packages.zip" | sha256sum -c -
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.3.0-source.tar.zst" \
+            "$GUNYAHVM_SOURCE_URL"
+          echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.3.0-source.tar.zst" |
+            sha256sum -c -
           unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
 
           device_deb=$(find /tmp/piano-packages -type f \
@@ -102,6 +110,16 @@ jobs:
             "$HOME/rpmbuild/SOURCES/piano-switch-to-android.desktop"
           install -m0644 piano-switch-boot/fedora-boot-compat.patch \
             "$HOME/rpmbuild/SOURCES/fedora-boot-compat.patch"
+          install -m0644 gunyahvm/runtime.json \
+            "$HOME/rpmbuild/SOURCES/runtime.json"
+          install -m0644 gunyahvm/gunyahvm-runtime-fragments.patch \
+            "$HOME/rpmbuild/SOURCES/gunyahvm-runtime-fragments.patch"
+          install -m0644 gunyahvm-guest-linux/runtime.json \
+            "$HOME/rpmbuild/SOURCES/gunyahvm-guest-linux-runtime.json"
+          install -m0644 gunyahvm-macos/runtime.json \
+            "$HOME/rpmbuild/SOURCES/gunyahvm-macos-runtime.json"
+          install -m0644 gunyahvm-windows/runtime.json \
+            "$HOME/rpmbuild/SOURCES/gunyahvm-windows-runtime.json"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
             "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro.conf"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro-HiFi.conf \
@@ -125,6 +143,9 @@ jobs:
             piano-switch-slot/piano-switch-slot.spec \
             piano-switch-boot/piano-switch-boot.spec \
             gunyahvm/gunyahvm.spec \
+            gunyahvm-guest-linux/gunyahvm-guest-linux.spec \
+            gunyahvm-macos/gunyahvm-macos.spec \
+            gunyahvm-windows/gunyahvm-windows.spec \
             casilda/casilda.spec \
             qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do
@@ -144,6 +165,9 @@ jobs:
             piano-switch-slot/piano-switch-slot.spec \
             piano-switch-boot/piano-switch-boot.spec \
             gunyahvm/gunyahvm.spec \
+            gunyahvm-guest-linux/gunyahvm-guest-linux.spec \
+            gunyahvm-macos/gunyahvm-macos.spec \
+            gunyahvm-windows/gunyahvm-windows.spec \
             casilda/casilda.spec \
             qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do

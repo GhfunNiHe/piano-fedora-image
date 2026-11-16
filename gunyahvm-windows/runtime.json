@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "architecture": "arm64",
+  "components": {
+    "uefi": {
+      "version": "0.1.90c4d52.piano1",
+      "features": [
+        "windows-ecam"
+      ],
+      "files": {
+        "image": "/usr/share/gunyahvm/windows/firmware.fd"
+      }
+    },
+    "windows_openssh": {
+      "version": "10.4.0.0p1-Preview",
+      "features": [
+        "offline",
+        "key-only"
+      ],
+      "files": {
+        "archive": "/usr/share/gunyahvm/windows/OpenSSH-ARM64.zip",
+        "lock": "/usr/share/gunyahvm/windows/openssh.json"
+      }
+    },
+    "windows_drivers": {
+      "version": "9922545ee7c65927e720c3c12b39cd8ae144e90b",
+      "features": [
+        "test-signed"
+      ],
+      "files": {
+        "inventory": "/usr/share/gunyahvm/windows/driver-files.json",
+        "certificate": "/usr/share/gunyahvm/windows/DroidVM_Test.cer",
+        "helper": "/usr/share/gunyahvm/windows/winpe-helper.exe",
+        "drivers/NetKVM/netkvm.cat": "/usr/share/gunyahvm/windows/drivers/NetKVM/netkvm.cat",
+        "drivers/NetKVM/netkvm.inf": "/usr/share/gunyahvm/windows/drivers/NetKVM/netkvm.inf",
+        "drivers/NetKVM/netkvm.sys": "/usr/share/gunyahvm/windows/drivers/NetKVM/netkvm.sys",
+        "drivers/NetKVM/netkvmp.exe": "/usr/share/gunyahvm/windows/drivers/NetKVM/netkvmp.exe",
+        "drivers/pvmpower/pvmpower.cat": "/usr/share/gunyahvm/windows/drivers/pvmpower/pvmpower.cat",
+        "drivers/pvmpower/pvmpower.inf": "/usr/share/gunyahvm/windows/drivers/pvmpower/pvmpower.inf",
+        "drivers/pvmpower/pvmpower.sys": "/usr/share/gunyahvm/windows/drivers/pvmpower/pvmpower.sys",
+        "drivers/rdmapool/rdmapool.cat": "/usr/share/gunyahvm/windows/drivers/rdmapool/rdmapool.cat",
+        "drivers/rdmapool/rdmapool.inf": "/usr/share/gunyahvm/windows/drivers/rdmapool/rdmapool.inf",
+        "drivers/rdmapool/rdmapool.sys": "/usr/share/gunyahvm/windows/drivers/rdmapool/rdmapool.sys",
+        "drivers/vioinput/viohidkmdf.sys": "/usr/share/gunyahvm/windows/drivers/vioinput/viohidkmdf.sys",
+        "drivers/vioinput/vioinput.cat": "/usr/share/gunyahvm/windows/drivers/vioinput/vioinput.cat",
+        "drivers/vioinput/vioinput.inf": "/usr/share/gunyahvm/windows/drivers/vioinput/vioinput.inf",
+        "drivers/vioinput/vioinput.sys": "/usr/share/gunyahvm/windows/drivers/vioinput/vioinput.sys",
+        "drivers/viostor/viostor.cat": "/usr/share/gunyahvm/windows/drivers/viostor/viostor.cat",
+        "drivers/viostor/viostor.inf": "/usr/share/gunyahvm/windows/drivers/viostor/viostor.inf",
+        "drivers/viostor/viostor.sys": "/usr/share/gunyahvm/windows/drivers/viostor/viostor.sys",
+        "DroidVM_Test.cer": "/usr/share/gunyahvm/windows/DroidVM_Test.cer"
+      }
+    }
+  }
+}

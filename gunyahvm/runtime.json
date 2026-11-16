@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "architecture": "arm64",
+  "components": {
+    "crosvm": {
+      "version": "96e84c3-iceland-7ae498c2-gvm3d-piano61-bti",
+      "features": [
+        "gunyah",
+        "net",
+        "vhost-net",
+        "vnc",
+        "simplefb",
+        "p9",
+        "input-modes",
+        "gpu",
+        "runtime-share",
+        "shared-memory",
+        "wayland-reconnect",
+        "virtiofs",
+        "virtiofs-readonly"
+      ],
+      "files": {
+        "binary": "/usr/lib/gunyahvm/crosvm/crosvm"
+      },
+      "build_features": [
+        "gunyah",
+        "net",
+        "vnc",
+        "virgl_renderer"
+      ]
+    },
+    "renderer": {
+      "version": "1.3.0+iceland.7ae498c2",
+      "features": [
+        "virgl",
+        "venus",
+        "drm-msm"
+      ],
+      "files": {
+        "library": "/usr/lib/gunyahvm/renderer/libvirglrenderer.so.1",
+        "render_server": "/usr/lib/gunyahvm/renderer/virgl_render_server"
+      }
+    }
+  }
+}

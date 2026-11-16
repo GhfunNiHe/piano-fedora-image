@@ -1,0 +1,30 @@
+--- a/src/gunyahvm/components.py
++++ b/src/gunyahvm/components.py
+@@ -9,0 +10 @@
++FRAGMENTS = Path("/usr/share/gunyahvm/runtime.d")
+@@ -115 +116,24 @@
+-    return validate(json.loads(path.read_text()), root)
++    data = json.loads(path.read_text())
++    # Fedora splits optional guest payloads into independent packages. Merge
++    # their manifests only for the installed system manifest, never for an
++    # explicit manifest path supplied by tests or callers.
++    if Path(path) == MANIFEST:
++        fragment_root = root / str(FRAGMENTS).lstrip("/")
++        if fragment_root.is_dir():
++            names = set(data.get("components", {}))
++            for fragment_path in sorted(fragment_root.glob("*.json")):
++                fragment = json.loads(fragment_path.read_text())
++                if (
++                    fragment.get("schema") != 1
++                    or fragment.get("architecture") != "arm64"
++                    or not isinstance(fragment.get("components"), dict)
++                ):
++                    raise ValueError(
++                        f"{fragment_path}: invalid runtime component fragment"
++                    )
++                for name, component in fragment["components"].items():
++                    if name in names:
++                        raise ValueError(f"duplicate runtime component: {name}")
++                    names.add(name)
++                    data["components"][name] = component
++    return validate(data, root)

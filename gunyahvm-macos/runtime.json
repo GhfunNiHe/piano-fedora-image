@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "architecture": "arm64",
+  "components": {
+    "macos": {
+      "version": "1.3.0-1",
+      "features": [
+        "create-from-apple",
+        "simplefb-wayland",
+        "virtio-mmio",
+        "vm-fd-share",
+        "wayland-reconnect"
+      ],
+      "files": {
+        "binary": "/usr/lib/gunyahvm/macos/crosvm/crosvm",
+        "vnc_library": "/usr/lib/gunyahvm/macos/crosvm/libvncserver.so.1",
+        "renderer": "/usr/lib/gunyahvm/macos/renderer/libvirglrenderer.so.1",
+        "kit": "/usr/lib/gunyahvm/macos/kit/kit.json",
+        "firmware": "/usr/lib/gunyahvm/macos/kit/firmware.fd"
+      }
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "architecture": "arm64",
+  "components": {
+    "guest_kernel": {
+      "version": "7.2.15-gvm63",
+      "features": [
+        "virtio-gpu",
+        "guest-accept",
+        "shared-boot"
+      ],
+      "files": {
+        "image": "/usr/share/gunyahvm/guest/Image",
+        "initrd": "/usr/share/gunyahvm/guest/initrd.img",
+        "modules": "/usr/share/gunyahvm/guest/modules.tar.gz"
+      },
+      "kernel_release": "7.2.15-gvm63",
+      "modules_load": []
+    },
+    "guest_mesa": {
+      "version": "26.2.5",
+      "features": [
+        "freedreno-virtio"
+      ],
+      "files": {
+        "archive": "/usr/share/gunyahvm/guest/mesa.tar.gz"
+      },
+      "guest_abi": "ubuntu:26.04",
+      "library_subdir": "lib",
+      "icd": "share/vulkan/icd.d/freedreno_icd.aarch64.json"
+    }
+  }
+}
