@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+[Desktop Entry]
+Type=Application
+Name=Switch to Android
+Name[zh_CN]=切换到 Android
+Comment=Switch the active A/B boot slot and restart; save your work first
+Comment[zh_CN]=切换活动 A/B 启动插槽并重启；请先保存工作
+Exec=pkexec /usr/bin/sta
+Icon=system-reboot
+Terminal=false
+StartupNotify=false
+Categories=System;
+Keywords=Android;reboot;dual boot;
+Keywords[zh_CN]=安卓;重启;双系统;

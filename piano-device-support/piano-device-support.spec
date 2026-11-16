@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.4.0
-Release:        7%{?dist}
+Version:        1.4.1
+Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -147,6 +147,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
+- Update the device payload to v1.4.1
+
 * Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-7
 - Update device payload to v1.4.0 and move boot hooks into separate packages
 

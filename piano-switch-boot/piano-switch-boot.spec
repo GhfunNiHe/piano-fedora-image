@@ -1,8 +1,8 @@
 %global debug_package %{nil}
 
 Name:           piano-switch-boot
-Version:        1.4.0
-Release:        2%{?dist}
+Version:        1.4.1
+Release:        1%{?dist}
 Summary:        Piano upstream boot image sets and system switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -72,6 +72,10 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %systemd_postun_with_restart piano-slot-success.service piano-emergency-android.service
 
 %changelog
+* Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
+- Update the upstream boot payload to v1.4.1
+- Drop the upstream switch battery requirement
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-2
 - Package upstream hook wrappers with Fedora kernel naming compatibility
 

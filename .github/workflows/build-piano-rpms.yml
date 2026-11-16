@@ -16,8 +16,8 @@ permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.4.0/piano-ubuntu-v1.4.0-packages.zip
-  PACKAGES_ZIP_SHA256: f7cbe3f60d06c8c525c3d86efe85ad4d690fabb996b943ac81a6996652c67f7d
+  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.4.1/piano-ubuntu-v1.4.1-packages.zip
+  PACKAGES_ZIP_SHA256: ddbd29a8ccb979dd4f5568c195a1eb0349b92725c8038fcaef3fc4c4f4102ed1
 
 jobs:
   build:
@@ -82,9 +82,6 @@ jobs:
           stage_deb piano-vm piano-vm "$vm_root"
           stage_deb piano-vm-windows piano-vm-windows "$vm_root"
           stage_deb gunyahvm gunyahvm
-          stage_deb gunyahvm-runtime gunyahvm-runtime
-          stage_deb gunyahvm-guest-kernel gunyahvm-guest-kernel
-          stage_deb gunyahvm-guest-mesa gunyahvm-guest-mesa
           stage_deb libcasilda-1.0 libcasilda-1.0
           stage_deb gir1.2-casilda-1.0 gir1.2-casilda-1.0
           stage_deb piano-npu-firmware piano-npu-firmware
@@ -101,6 +98,8 @@ jobs:
             "$HOME/rpmbuild/SOURCES/piano-local-update"
           install -m0755 piano-switch-slot/sta \
             "$HOME/rpmbuild/SOURCES/sta"
+          install -m0644 piano-switch-slot/piano-switch-to-android.desktop \
+            "$HOME/rpmbuild/SOURCES/piano-switch-to-android.desktop"
           install -m0644 piano-switch-boot/fedora-boot-compat.patch \
             "$HOME/rpmbuild/SOURCES/fedora-boot-compat.patch"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
