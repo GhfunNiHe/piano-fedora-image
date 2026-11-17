@@ -21,6 +21,8 @@ Source7:        libmd-dev_1.1.0-2build1.1_arm64.deb
 Source8:        libmd0_1.1.0-2build1.1_arm64.deb
 Source9:        libyaml-dev_0.2.5-1build1_arm64.deb
 Source10:       libyaml-0-2_0.2.5-1build1_arm64.deb
+Source11:       fedora-aarch64-sysroot.tar.gz
+Patch0:         build-npu-fedora-sysroot.patch
 Requires:       glibc >= 2.38 libstdc++ >= 13 libgcc libbsd libmd libyaml
 Requires:       python3 systemd systemd-udev qcom-npu-dsp
 BuildRequires:  autoconf
@@ -66,15 +68,18 @@ Requires:       qcom-npu-runtime = %{version}-%{release}
 Qwen3 0.6B Q4_0 model used by the offline npu-demo command.
 
 %prep
-%autosetup -n piano-source
+%autosetup -n piano-source -p1
 install -d %{_builddir}/npu-cache
 install -m0644 \
     %{SOURCE1} %{SOURCE2} %{SOURCE3} %{SOURCE4} \
     %{SOURCE5} %{SOURCE6} %{SOURCE7} %{SOURCE8} %{SOURCE9} %{SOURCE10} \
     %{_builddir}/npu-cache/
+install -d %{_builddir}/fedora-aarch64-sysroot
+tar -xzf %{SOURCE11} -C %{_builddir}/fedora-aarch64-sysroot
 
 %build
-%{__python3} tools/build-npu.py \
+NPU_SYSROOT=%{_builddir}/fedora-aarch64-sysroot \
+    %{__python3} tools/build-npu.py \
     --cache %{_builddir}/npu-cache \
     --output %{_builddir}/npu-output \
     --jobs %{_smp_build_ncpus}
@@ -135,6 +140,7 @@ ldconfig
 - Stop treating Hexagon DSP runtime files as Fedora host library dependencies
 - Filter link-time libc.so and libgcc.so requirements from the runtime package
 - Build FastRPC and llama.cpp/HTP v79 from the pinned upstream sources
+- Use a Fedora aarch64 sysroot with the Fedora cross GCC
 - Mark the architecture-independent NPU demo model as noarch
 
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+git20261112.e1f7593-5

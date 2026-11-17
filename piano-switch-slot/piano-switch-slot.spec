@@ -13,7 +13,7 @@ Source2:        piano-local-update
 Source3:        zz-piano-boot-postrm
 Source4:        sta
 Source5:        piano-switch-to-android.desktop
-Source6:        mkbootimg.py
+Source6:        aosp-mkbootimg.tar.gz
 Source7:        avbtool.py
 Requires:       piano-device-support qbootctl
 Conflicts:      piano-switch-boot
@@ -39,7 +39,11 @@ install -Dm755 tools/build-persistent-boot.py \
     %{buildroot}%{_prefix}/lib/piano/boot/build-persistent-boot.py
 install -Dm644 tools/initramfs_archive.py \
     %{buildroot}%{_prefix}/lib/piano/boot/initramfs_archive.py
-install -Dm644 %{SOURCE6} %{buildroot}%{_prefix}/lib/piano/boot/mkbootimg.py
+install -d %{buildroot}%{_prefix}/lib/piano/boot/gki
+tar -xzf %{SOURCE6} -C %{buildroot}%{_prefix}/lib/piano/boot
+chmod 0755 %{buildroot}%{_prefix}/lib/piano/boot/mkbootimg.py \
+    %{buildroot}%{_prefix}/lib/piano/boot/unpack_bootimg.py
+chmod 0644 %{buildroot}%{_prefix}/lib/piano/boot/gki/generate_gki_certificate.py
 install -Dm755 %{SOURCE7} %{buildroot}%{_prefix}/lib/piano/boot/avbtool.py
 # The slot scheme uses only the common image builder, not the upstream
 # slot-A switch implementation.

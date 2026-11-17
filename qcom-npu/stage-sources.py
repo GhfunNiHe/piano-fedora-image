@@ -59,7 +59,7 @@ def main() -> None:
     inputs = lock["inputs"]
     rows = [
         row
-        for row in [*inputs.values(), *inputs["build-dependencies"]]
+        for row in [*inputs.values(), *inputs.get("build-dependencies", [])]
         if isinstance(row, dict)
     ]
     args.output.mkdir(parents=True, exist_ok=True)

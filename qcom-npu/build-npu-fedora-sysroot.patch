@@ -1,0 +1,43 @@
+--- a/tools/build-npu.py
++++ b/tools/build-npu.py
+@@ -62,16 +62,21 @@
+         path=ASSETS/patch['file']
+         if sha(path)!=patch['sha256']:raise ValueError('Build patch identity mismatch')
+         run(['patch','-p1','--forward','-i',path],cwd=llama)
+-    dep=b/'sysroot';dep.mkdir()
++    dep=Path(os.environ['NPU_SYSROOT']).resolve() if os.environ.get('NPU_SYSROOT') else b/'sysroot'
++    dep.mkdir(exist_ok=True)
+     for f in dependencies:run(['dpkg-deb','-x',f,dep])
++    sysroot=f'--sysroot={dep}'
++    cxx_root=next((dep/'usr/include/c++').iterdir())
++    cxx_target=next(cxx_root.glob('aarch64-redhat-linux'))
++    cxx_headers=f'-isystem {cxx_root} -isystem {cxx_target}'
+     env=dict(os.environ,GIT_CEILING_DIRECTORIES=str(b),SOURCE_DATE_EPOCH=str(lock['source_date_epoch']),LC_ALL='C.UTF-8',
+-             CFLAGS=f'-ffile-prefix-map={b}=. -fno-record-command-line',
+-             CXXFLAGS=f'-ffile-prefix-map={b}=. -fno-record-command-line')
++             CFLAGS=f'{sysroot} -ffile-prefix-map={b}=. -fno-record-command-line',
++             CXXFLAGS=f'{sysroot} {cxx_headers} -ffile-prefix-map={b}=. -fno-record-command-line')
+     rpc_env=dict(env,CC='aarch64-linux-gnu-gcc',CXX='aarch64-linux-gnu-g++',
+                  PKG_CONFIG_LIBDIR=str(dep/'usr/lib/aarch64-linux-gnu/pkgconfig'),PKG_CONFIG_SYSROOT_DIR=str(dep),
+                  BSD_LIBS='-l:libbsd.so.0 -l:libmd.so.0',
+-                 CFLAGS=f'-O2 -ffile-prefix-map={b}=.',
+-                 LDFLAGS=f'-L{dep}/usr/lib/aarch64-linux-gnu -Wl,-rpath-link,{dep}/usr/lib/aarch64-linux-gnu')
++                 CFLAGS=f'{sysroot} -O2 -ffile-prefix-map={b}=.',
++                 LDFLAGS=f'{sysroot} -L{dep}/usr/lib/aarch64-linux-gnu -Wl,-rpath-link,{dep}/usr/lib/aarch64-linux-gnu')
+     run(['bash','./autogen.sh'],cwd=rpc,env=rpc_env)
+     run(['bash','./configure','--host=aarch64-linux-gnu','--prefix=/usr','--libdir=/usr/lib/aarch64-linux-gnu','--with-config-base-dir=/usr/share/qcom'],cwd=rpc,env=rpc_env)
+     run(['make','-j'+str(a.jobs)],cwd=rpc,env=rpc_env)
+@@ -79,11 +84,12 @@
+     build=b/'llama-build'
+     run(['cmake','-S',llama,'-B',build,'-G','Ninja','-DCMAKE_SYSTEM_NAME=Linux','-DCMAKE_SYSTEM_PROCESSOR=aarch64',
+          '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc','-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++','-DCMAKE_BUILD_TYPE=Release',
++         '-DCMAKE_SYSROOT='+str(dep),'-DCMAKE_EXE_LINKER_FLAGS=--sysroot='+str(dep),
+          '-DGGML_NATIVE=OFF','-DGGML_CPU_ARM_ARCH=armv8.7-a+fp16+dotprod+i8mm','-DGGML_OPENMP=OFF','-DGGML_LLAMAFILE=OFF',
+          '-DGGML_HEXAGON=ON','-DGGML_BACKEND_DL=ON','-DHEXAGON_SDK_ROOT='+str(sdk),'-DPREBUILT_LIB_DIR=linux_aarch64',
+          '-DLLAMA_OPENSSL=OFF','-DLLAMA_BUILD_TESTS=OFF','-DLLAMA_BUILD_EXAMPLES=OFF','-DLLAMA_BUILD_SERVER=OFF','-DLLAMA_BUILD_APP=OFF',
+          '-DLLAMA_BUILD_NUMBER=0','-DLLAMA_BUILD_COMMIT='+inputs['llama']['revision'][:12],'-DCMAKE_BUILD_RPATH_USE_ORIGIN=ON','-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON','-DCMAKE_INSTALL_RPATH=$ORIGIN',
+-         '-DCMAKE_C_FLAGS=-ffile-prefix-map='+str(b)+'=.','-DCMAKE_CXX_FLAGS=-ffile-prefix-map='+str(b)+'=.'],env=env)
++         '-DCMAKE_C_FLAGS=--sysroot='+str(dep)+' -ffile-prefix-map='+str(b)+'=.','-DCMAKE_CXX_FLAGS=--sysroot='+str(dep)+' '+cxx_headers+' -ffile-prefix-map='+str(b)+'=.'],env=env)
+     # Select just v79; the other upstream ExternalProject targets are not needed on SM8750.
+     run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=env)
+     run(['aarch64-linux-gnu-g++','-std=c++17','-O3','-Wall','-Wextra','-I'+str(llama/'include'),'-I'+str(llama/'ggml/include'),

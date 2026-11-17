@@ -8,7 +8,7 @@ License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 BuildArch:      noarch
 Source0:        piano-source-v1.5.0.tar.gz
-Source1:        mkbootimg.py
+Source1:        aosp-mkbootimg.tar.gz
 Source2:        avbtool.py
 Source3:        fedora-boot-compat.patch
 BuildRequires:  patch
@@ -50,7 +50,11 @@ install -Dm755 tools/build-persistent-boot.py \
     %{buildroot}%{_prefix}/lib/piano/boot/build-persistent-boot.py
 install -Dm644 tools/initramfs_archive.py \
     %{buildroot}%{_prefix}/lib/piano/boot/initramfs_archive.py
-install -Dm644 %{SOURCE1} %{buildroot}%{_prefix}/lib/piano/boot/mkbootimg.py
+install -d %{buildroot}%{_prefix}/lib/piano/boot/gki
+tar -xzf %{SOURCE1} -C %{buildroot}%{_prefix}/lib/piano/boot
+chmod 0755 %{buildroot}%{_prefix}/lib/piano/boot/mkbootimg.py \
+    %{buildroot}%{_prefix}/lib/piano/boot/unpack_bootimg.py
+chmod 0644 %{buildroot}%{_prefix}/lib/piano/boot/gki/generate_gki_certificate.py
 install -Dm755 %{SOURCE2} %{buildroot}%{_prefix}/lib/piano/boot/avbtool.py
 for name in piano-slot-success piano-emergency-android; do
     install -Dm644 "$integration/usr/lib/systemd/system/$name.service" \

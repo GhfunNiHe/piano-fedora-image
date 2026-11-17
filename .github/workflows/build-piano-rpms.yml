@@ -34,6 +34,10 @@ env:
   MINIJAIL_SOURCE_SHA256: f9b1844f624a298d62ce5cabe8b95d9b582c175f92da9352041db48af83a6ea4
   CROSVM_CARGO_LOCK_PRE_PATCH_SHA256: 297fcbd82506ed0dcee1140cd91036ccba4fce9ca34052cbf36b1d80cba3d384
   CROSVM_CARGO_LOCK_SHA256: 3dd3103d84d1eaf303918b05317fcc19feb6a90f265e3591297f2ce151d1425b
+  AOSP_MKBOOTIMG_REPO_URL: https://android.googlesource.com/platform/system/tools/mkbootimg
+  AOSP_MKBOOTIMG_COMMIT: 4a27dd13adf9846e12d585d6fe99a375ebb58396
+  AOSP_MKBOOTIMG_SHA256: 37d84b3d162e0bc62e36c1f4e1c63c85ea0caa9f29be023eb2f8efe006ad948c
+  AOSP_UNPACK_BOOTIMG_SHA256: 06b54dd9a07c5281778e29e234e76f6e3faee8bf0c904a5ef88fdee30eeed12e
   IIO_SENSOR_PROXY_SOURCE_RPM_URL: https://kojipkgs.fedoraproject.org/packages/iio-sensor-proxy/3.9/3.fc45/src/iio-sensor-proxy-3.9-3.fc45.src.rpm
   IIO_SENSOR_PROXY_SOURCE_RPM_SHA256: 9ee53463f253b4ccd202211ea3dd8578349dc827de38c1f753c5c268bf3e5e0f
   UPSTREAM_TAG: v1.5.0
@@ -117,10 +121,17 @@ jobs:
             docs/VIRTUALIZATION.zh-CN.md \
             tools/build-persistent-boot.py tools/initramfs_archive.py \
             LICENSE NOTICE LICENSES
-          "$source_tree/tools/fetch-aosp-mkbootimg.sh"
           "$source_tree/tools/fetch-aosp-avb.sh"
-          install -m0644 "$source_tree/tools/local/aosp-mkbootimg/mkbootimg.py" \
-            "$HOME/rpmbuild/SOURCES/mkbootimg.py"
+          aosp_tree="$RUNNER_TEMP/aosp-mkbootimg"
+          git clone --quiet --filter=blob:none --no-checkout \
+            "$AOSP_MKBOOTIMG_REPO_URL" "$aosp_tree"
+          git -C "$aosp_tree" fetch --quiet --depth 1 origin "$AOSP_MKBOOTIMG_COMMIT"
+          git -C "$aosp_tree" checkout --quiet --detach "$AOSP_MKBOOTIMG_COMMIT"
+          echo "$AOSP_MKBOOTIMG_SHA256  $aosp_tree/mkbootimg.py" | sha256sum -c -
+          echo "$AOSP_UNPACK_BOOTIMG_SHA256  $aosp_tree/unpack_bootimg.py" | sha256sum -c -
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+            -czf "$HOME/rpmbuild/SOURCES/aosp-mkbootimg.tar.gz" \
+            -C "$aosp_tree" mkbootimg.py unpack_bootimg.py gki/generate_gki_certificate.py
           install -m0755 "$source_tree/tools/local/aosp-avb/avbtool.py" \
             "$HOME/rpmbuild/SOURCES/avbtool.py"
 
@@ -423,6 +434,29 @@ jobs:
             echo "CCACHE_BASEDIR=$HOME/rpmbuild"
             echo "CCACHE_NOHASHDIR=true"
           } >> "$GITHUB_ENV"
+
+      - name: Stage Fedora aarch64 sysroot
+        run: |
+          set -euxo pipefail
+          sysroot="$RUNNER_TEMP/fedora-aarch64-sysroot"
+          sysroot_rpms="$RUNNER_TEMP/fedora-aarch64-sysroot-rpms"
+          target_release="$(rpm -E %fedora)"
+          mkdir -p "$sysroot" "$sysroot_rpms"
+          dnf download \
+            --releasever="$target_release" \
+            --forcearch=aarch64 \
+            --destdir="$sysroot_rpms" \
+            filesystem glibc glibc-common glibc-devel kernel-headers libgcc \
+            libstdc++ libstdc++-devel libxcrypt libxcrypt-devel
+          for rpmfile in "$sysroot_rpms"/*.rpm; do
+            rpm2cpio "$rpmfile" | cpio -idm --quiet -D "$sysroot"
+          done
+          test -L "$sysroot/lib64"
+          ln -s libgcc_s.so.1 "$sysroot/usr/lib64/libgcc_s.so"
+          ln -s libstdc++.so.6 "$sysroot/usr/lib64/libstdc++.so"
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+            -czf "$HOME/rpmbuild/SOURCES/fedora-aarch64-sysroot.tar.gz" \
+            -C "$sysroot" .
 
       - name: Stage upstream source
         run: |
