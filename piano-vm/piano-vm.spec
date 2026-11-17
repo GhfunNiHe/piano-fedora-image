@@ -106,7 +106,6 @@ or product key is included.
 
 %prep
 %setup -q -n %{crosvm_src}
-# The upstream series contains Git binary diffs, which GNU patch cannot apply.
 git init -q
 for patchfile in %{_sourcedir}/piano-vm-*.patch; do
     git apply --whitespace=nowarn "$patchfile"

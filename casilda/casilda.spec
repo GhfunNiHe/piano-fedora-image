@@ -59,7 +59,6 @@ Headers, pkg-config metadata and GObject introspection source for Casilda.
 %meson_build
 
 %check
-# No upstream test suite yet.
 
 %install
 %meson_install

@@ -2,7 +2,7 @@
 
 Name:           qualcomm-iris-vaapi
 Version:        0.2.0
-Release:        0piano2%{?dist}
+Release:        0piano1%{?dist}
 Summary:        Qualcomm Iris V4L2 VA-API decoder
 License:        MIT AND LGPL-2.1-only AND GPL-2.0-only
 URL:            https://github.com/phxinyang/qualcomm-iris-vaapi
@@ -26,8 +26,6 @@ BuildRequires:  pkgconfig(x11)
 Provides:       piano-iris-vaapi = %{version}-%{release}
 Obsoletes:      piano-iris-vaapi < %{version}-%{release}
 Requires:       libva libdrm libglvnd-egl libglvnd-gles libstdc++
-# libgbm.so.1 is intentionally resolved by the provider, either Fedora's
-# mesa-libgbm or the separately supplied Mesa 26.3-rc RPM.
 Requires:       libgbm.so.1()(64bit)
 
 %description
@@ -67,11 +65,9 @@ install -Dm644 %{SOURCE0} \
 %{_libdir}/dri/msm_drv_video.so
 
 %changelog
-* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.2.0-0piano2
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.2.0-0piano1
 - Rename the package from piano-iris-vaapi to qualcomm-iris-vaapi
 - Build the VA-API driver from the pinned upstream source and patch queue
-
-* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.2.0-0piano1
 - Update the Iris hardware decoder payload to v1.3.0
 
 * Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 0.1.0+git.f587b14-0piano4.1

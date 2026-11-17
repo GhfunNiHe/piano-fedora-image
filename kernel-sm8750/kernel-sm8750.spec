@@ -19,7 +19,6 @@ URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
-# Exact config shipped in the v1.5.0 compiled linux-image package.
 Source1:        piano-kernel.config
 Source2:        extra-kernel.config
 # Stock Android inputs for assembling piano-boot.dtb; see stock/PROVENANCE.json.

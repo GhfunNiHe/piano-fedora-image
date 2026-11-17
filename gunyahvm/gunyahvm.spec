@@ -93,7 +93,6 @@ sed "s|^prefix=/usr$|prefix=$work/virgl-root/usr|" \
     "$work/virgl-root/usr/$libdir/pkgconfig/virglrenderer.pc" \
     >"$work/virgl-pc/virglrenderer.pc"
 
-# The later patches contain binary blobs, which patch(1) cannot apply.
 tar -xzf inputs/crosvm-96e84c3.tar.gz \
     --strip-components=1 -C "$work/crosvm"
 tar -xzf inputs/minijail-7845d899.tar.gz \

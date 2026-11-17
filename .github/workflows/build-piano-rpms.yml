@@ -56,14 +56,48 @@ jobs:
         run: |
           set -euxo pipefail
           dnf install -y \
-            cargo cpio curl dpkg dnf-plugins-core git gzip patch patchelf \
+            cargo ccache cpio curl dpkg dnf-plugins-core git gzip patch patchelf \
             rpm-build rpmdevtools rust \
-            systemd-rpm-macros tar unzip
+            sccache systemd-rpm-macros tar unzip
           dnf install -y --nogpgcheck \
             --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
             terra-release
           rpmdev-setuptree
           mkdir -p "$HOME/rpmbuild/tmp"
+          mkdir -p "$HOME/.cache/ccache" "$HOME/.cache/sccache"
+
+      - name: Restore C/C++ compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: piano-rpm-ccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/workflows/build-piano-rpms.yml', '**/*.spec', '**/*.patch') }}
+          restore-keys: |
+            piano-rpm-ccache-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Restore Rust compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sccache
+          key: piano-rpm-sccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/workflows/build-piano-rpms.yml', '**/*.spec', '**/*.patch') }}
+          restore-keys: |
+            piano-rpm-sccache-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Configure compiler caches
+        run: |
+          set -euxo pipefail
+          ccache --max-size=2G
+          ccache --set-config=compression=true
+          sccache --start-server
+          {
+            echo "PATH=/usr/lib64/ccache:$PATH"
+            echo "CCACHE_DIR=$HOME/.cache/ccache"
+            echo "CCACHE_BASEDIR=$HOME/rpmbuild"
+            echo "CCACHE_NOHASHDIR=true"
+            echo "SCCACHE_DIR=$HOME/.cache/sccache"
+            echo "SCCACHE_CACHE_SIZE=2G"
+            echo "RUSTC_WRAPPER=sccache"
+            echo "CARGO_INCREMENTAL=0"
+          } >> "$GITHUB_ENV"
 
       - name: Stage upstream source
         run: |
@@ -307,6 +341,12 @@ jobs:
               --define "_topdir $HOME/rpmbuild" "$spec"
           done
 
+      - name: Show compiler cache statistics
+        if: always()
+        run: |
+          ccache --show-stats || true
+          sccache --show-stats || true
+
       - name: Show package results
         run: |
           set -euxo pipefail
@@ -330,12 +370,12 @@ jobs:
           retention-days: 14
 
   build-qcom-npu:
-    name: Build QCOM NPU payload RPMs (Fedora x86_64)
+    name: Build QCOM NPU RPMs from source (Fedora x86_64)
     runs-on: ubuntu-24.04
     container:
       image: fedora:latest
       options: --user 0
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -345,35 +385,61 @@ jobs:
         run: |
           set -euxo pipefail
           dnf install -y \
-            cpio curl dpkg dnf-plugins-core gzip rpm-build rpmdevtools \
-            systemd-rpm-macros tar unzip
+            ccache cpio curl dpkg dnf-plugins-core git gzip patch \
+            rpm-build rpmdevtools systemd-rpm-macros tar unzip
           rpmdev-setuptree
           mkdir -p "$HOME/rpmbuild/tmp"
+          mkdir -p "$HOME/.cache/ccache" "$HOME/npu-inputs"
 
-      - name: Stage QCOM NPU payloads
+      - name: Restore QCOM NPU source inputs
+        uses: actions/cache@v4
+        with:
+          path: ~/npu-inputs
+          key: qcom-npu-inputs-${{ env.UPSTREAM_COMMIT }}
+
+      - name: Restore QCOM NPU C/C++ compiler cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: qcom-npu-ccache-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('qcom-npu/qcom-npu.spec', 'qcom-npu/stage-sources.py') }}
+          restore-keys: |
+            qcom-npu-ccache-${{ runner.os }}-${{ runner.arch }}-
+
+      - name: Configure QCOM NPU cross compiler cache
         run: |
           set -euxo pipefail
-          curl --fail --location --retry 3 --output /tmp/piano-packages.zip \
-            "$PACKAGES_ZIP_URL"
-          echo "$PACKAGES_ZIP_SHA256  /tmp/piano-packages.zip" | sha256sum -c -
-          unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
+          ccache --max-size=2G
+          ccache --set-config=compression=true
+          mkdir -p "$RUNNER_TEMP/ccache-bin"
+          for compiler in gcc g++; do
+            wrapper="$RUNNER_TEMP/ccache-bin/aarch64-linux-gnu-$compiler"
+            printf '%s\n' '#!/bin/sh' \
+              "exec ccache /usr/bin/aarch64-linux-gnu-$compiler \"\$@\"" > "$wrapper"
+            chmod 0755 "$wrapper"
+          done
+          {
+            echo "PATH=$RUNNER_TEMP/ccache-bin:/usr/lib64/ccache:$PATH"
+            echo "CCACHE_DIR=$HOME/.cache/ccache"
+            echo "CCACHE_BASEDIR=$HOME/rpmbuild"
+            echo "CCACHE_NOHASHDIR=true"
+          } >> "$GITHUB_ENV"
 
-          stage_deb() {
-            local rpm_name=$1
-            local stem=$2
-            local deb work
-            deb=$(find /tmp/piano-packages -type f -name "${stem}_*.deb" -print -quit)
-            test -n "$deb"
-            work=$(mktemp -d)
-            dpkg-deb -x "$deb" "$work/payload"
-            tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
-              -czf "$HOME/rpmbuild/SOURCES/${rpm_name}-payload.tar.gz" -C "$work" payload
-            rm -rf "$work"
-          }
-
-          stage_deb piano-npu-firmware piano-npu-firmware
-          stage_deb qcom-npu-runtime qcom-npu-runtime
-          stage_deb qcom-npu-demo-model qcom-npu-demo-model
+      - name: Stage upstream source
+        run: |
+          set -euxo pipefail
+          source_tree="$RUNNER_TEMP/piano-mainline-source"
+          git clone --depth 1 --branch "$UPSTREAM_TAG" \
+            https://github.com/yzddmr6/xiaomipad-8pro-mainline "$source_tree"
+          test "$(git -C "$source_tree" rev-parse HEAD)" = "$UPSTREAM_COMMIT"
+          git -C "$source_tree" archive --format=tar.gz \
+            --prefix=piano-source/ \
+            --output "$HOME/rpmbuild/SOURCES/piano-source-$UPSTREAM_TAG.tar.gz" \
+            "$UPSTREAM_TAG" packaging/npu firmware/npu tools/build-npu.py \
+            LICENSE NOTICE LICENSES
+          python3 qcom-npu/stage-sources.py \
+            --lock "$source_tree/packaging/npu/sources.json" \
+            --output "$HOME/npu-inputs"
+          install -m0644 "$HOME/npu-inputs/"* "$HOME/rpmbuild/SOURCES/"
 
       - name: Build RPMs
         run: |
@@ -385,6 +451,10 @@ jobs:
             qcom-npu/qcom-npu.spec
           find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" \
             -type f -printf '%p %s bytes\n' | sort
+
+      - name: Show compiler cache statistics
+        if: always()
+        run: ccache --show-stats || true
 
       - name: Upload RPMs
         uses: actions/upload-artifact@v7
