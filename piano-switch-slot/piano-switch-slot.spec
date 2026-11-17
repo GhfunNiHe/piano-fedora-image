@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-switch-slot
-Version:        1.4.1
+Version:        1.5.0
 Release:        1%{?dist}
 Summary:        Piano local boot image hook and A/B slot switch
 License:        MIT AND GPL-2.0-only
@@ -55,6 +55,9 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %{_datadir}/applications/piano-switch-to-android.desktop
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
+- Follow the v1.5.0 device payload; the local boot hook is unchanged
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
 - Follow the v1.4.1 device payload
 - Add a desktop launcher for switching to Android through sta

@@ -4,22 +4,22 @@
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT 9a4bf41c2c4faf6e968631c88a4c0e742fc449ba
-%global KERNEL_SHORT 9a4bf41
+%global KERNEL_COMMIT 1c21cb9895d69c1c5e83ceae68952fedf522644a
+%global KERNEL_SHORT 1c21cb9
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        3.piano%{?dist}
+Release:        4.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
 Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
-# Exact config shipped in the v1.4.1 compiled linux-image package.
+# Exact config shipped in the v1.5.0 compiled linux-image package.
 Source1:        piano-kernel.config
 Source2:        extra-kernel.config
 # Stock Android inputs for assembling piano-boot.dtb; see stock/PROVENANCE.json.
@@ -45,7 +45,7 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.4.1 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.5.0 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
 UFS BSG settings. The package assembles the piano boot DTB from the freshly
@@ -155,6 +155,9 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-4.piano
+- Update to the v1.5.0 kernel commit and exact config from its compiled linux-image package
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-3.piano
 - Update to the v1.4.1 kernel commit and exact config from its compiled linux-image package
 - Keep ThinLTO, built-in NTSYNC/F2FS, multipath routing and UFS BSG overrides

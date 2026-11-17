@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.4.1
+Version:        1.5.0
 Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
@@ -13,9 +13,14 @@ Source2:        Xiaomi-Pad-8-Pro-HiFi.conf
 Source3:        Piano-Capture-Diag.conf
 Source4:        Piano-Capture-Diag-HiFi.conf
 Source5:        50-piano-speaker-upmix.conf
+Source6:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service#/piano-speaker-rotation.service
+Source7:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/device/audio/speaker-rotation/speaker-rotation.py#/piano-speaker-rotation.py
+Source8:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json#/piano-speaker-rotation-config.json
+Source9:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf#/55-piano-speaker-rotation.conf
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       v4l-utils
+Requires:       pipewire-utils
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl
 Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
@@ -52,6 +57,9 @@ rm -f %{buildroot}%{_unitdir}/piano-slot-success.service
 rm -f %{buildroot}%{_unitdir}/piano-emergency-android.service
 rm -f %{buildroot}%{_datadir}/applications/piano-switch-to-android.desktop
 rm -f %{buildroot}%{_datadir}/polkit-1/actions/io.github.piano.switch.policy
+rm -f %{buildroot}%{_datadir}/gdm/dconf/50-piano-device-settings
+rmdir %{buildroot}%{_datadir}/gdm/dconf 2>/dev/null || :
+rmdir %{buildroot}%{_datadir}/gdm 2>/dev/null || :
 rm -f %{buildroot}/etc/flash-kernel/machine
 rmdir %{buildroot}/etc/flash-kernel 2>/dev/null || :
 rmdir %{buildroot}/etc/kernel/postinst.d 2>/dev/null || :
@@ -77,6 +85,14 @@ install -Dm644 %{SOURCE5} \
     %{buildroot}%{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
 install -Dm644 %{SOURCE5} \
     %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
+install -Dm644 %{SOURCE6} \
+    %{buildroot}%{_userunitdir}/piano-speaker-rotation.service
+install -Dm755 %{SOURCE7} \
+    %{buildroot}%{_libexecdir}/piano/speaker-rotation.py
+install -Dm644 %{SOURCE8} \
+    %{buildroot}%{_datadir}/piano/speaker-rotation/config.json
+install -Dm644 %{SOURCE9} \
+    %{buildroot}%{_datadir}/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf
 
 # Boot status is optional because the hook packages are separate.
 sed -i \
@@ -97,6 +113,8 @@ sed -i \
 %{_datadir}/alsa/ucm2/conf.d/sm8750
 %{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
 %{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
+%{_datadir}/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf
+%{_datadir}/piano/speaker-rotation
 %{_bindir}/piano-check
 %{_libexecdir}/piano
 %{_prefix}/lib/piano
@@ -109,6 +127,8 @@ sed -i \
 %{_prefix}/lib/systemd/system-sleep/tablet-charge-sample
 %{_prefix}/lib/systemd/user/tablet-charge-idle.service
 %{_prefix}/lib/systemd/user/org.gnome.SettingsDaemon.Power.target.d/50-tablet-charge-idle.conf
+%{_userunitdir}/piano-speaker-rotation.service
+%{_prefix}/libexec/tablet-charge-behaviour
 %{_prefix}/libexec/tablet-charge-display
 %{_prefix}/libexec/tablet-charge-idle
 %{_prefix}/libexec/tablet-charge-sample
@@ -123,10 +143,13 @@ sed -i \
 %{_datadir}/piano/pen
 %{_datadir}/polkit-1/actions/io.github.piano.devmode.policy
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
+%{_datadir}/polkit-1/actions/org.tablet.charge-behaviour.policy
 
 %post
 %systemd_post piano-debug-timeout.service piano-pen-radio.service tablet-charge-events.service tablet-charge-sample.timer
+%systemd_user_post piano-speaker-rotation.service
 if command -v systemctl >/dev/null 2>&1; then
+    systemctl --global enable piano-speaker-rotation.service >/dev/null 2>&1 || :
     systemctl disable --now piano-debug.service >/dev/null 2>&1 || :
     systemctl enable --now tablet-charge-events.service tablet-charge-sample.timer >/dev/null 2>&1 || :
 fi
@@ -140,6 +163,10 @@ fi
 
 %preun
 %systemd_preun tablet-charge-events.service tablet-charge-sample.timer
+%systemd_user_preun piano-speaker-rotation.service
+if [ "$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
+    systemctl --global disable piano-speaker-rotation.service >/dev/null 2>&1 || :
+fi
 
 %postun
 if command -v udevadm >/dev/null 2>&1; then
@@ -147,6 +174,11 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
+- Update the device payload to v1.5.0
+- Add charge pause control and speaker rotation hardware policy
+- Exclude the GDM ambient-brightness policy from device support
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
 - Update the device payload to v1.4.1
 

@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           piano-switch-boot
-Version:        1.4.1
+Version:        1.5.0
 Release:        1%{?dist}
 Summary:        Piano upstream boot image sets and system switch
 License:        MIT AND GPL-2.0-only
@@ -72,6 +72,9 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %systemd_postun_with_restart piano-slot-success.service piano-emergency-android.service
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
+- Follow the v1.5.0 device payload; the boot hook itself is unchanged
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
 - Update the upstream boot payload to v1.4.1
 - Drop the upstream switch battery requirement
