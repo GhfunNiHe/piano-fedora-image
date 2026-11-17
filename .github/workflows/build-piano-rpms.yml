@@ -10,6 +10,7 @@ on:
       - "xiaomi-piano-firmware/**"
       - "gunyahvm/**"
       - "casilda/**"
+      - "qualcomm-iris-vaapi/**"
       - "qcom-npu/**"
       - ".github/workflows/build-piano-rpms.yml"
 
@@ -21,6 +22,22 @@ env:
   PACKAGES_ZIP_SHA256: ad74f05a060187b0e006079568d2b9f27272c05efc4bb7dc6964b200eeae32b9
   GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.3.0/gunyahvm-1.3.0-source.tar.zst
   GUNYAHVM_SOURCE_SHA256: 0e580ddaea3274614d2d8f2b29c46541936807de662d0a0be84ac7f0776a6d49
+  CASILDA_SOURCE_URL: https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz
+  CASILDA_SOURCE_SHA256: 63d85aa795f27ee5e5404ec7d8f6d955874f131bbff6ff9e6efe904d415a362c
+  HEXAGONRPC_SOURCE_URL: https://github.com/linux-msm/hexagonrpc/archive/598b591ae9da6a6cfe2ca5ea78998019ca6395ea.tar.gz
+  HEXAGONRPC_SOURCE_SHA256: 05181d130f1e3a3f4c368be606a627562f7abd972c5efff92a21d66d35a2fe51
+  QUALCOMM_IRIS_SOURCE_URL: https://codeload.github.com/phxinyang/qualcomm-iris-vaapi/tar.gz/4125b1190c66ff7cf46e54c2b6d4076a01d7d1cd
+  QUALCOMM_IRIS_SOURCE_SHA256: 71b127e72f17a3056749de13fa68158a9f1d506f986d571f214312b5ee41b104
+  CROSVM_SOURCE_URL: https://codeload.github.com/google/crosvm/tar.gz/96e84c3f680e34e82e932ef911ae97d734121758
+  CROSVM_SOURCE_SHA256: 805f9e718ae1256193a65549281b52cfd44999d3ebe54204f1c75c91fd5249c3
+  MINIJAIL_SOURCE_URL: https://codeload.github.com/google/minijail/tar.gz/7845d89927a82dbdcdee6276837cd0978f69ba19
+  MINIJAIL_SOURCE_SHA256: f9b1844f624a298d62ce5cabe8b95d9b582c175f92da9352041db48af83a6ea4
+  CROSVM_CARGO_LOCK_PRE_PATCH_SHA256: 297fcbd82506ed0dcee1140cd91036ccba4fce9ca34052cbf36b1d80cba3d384
+  CROSVM_CARGO_LOCK_SHA256: 3dd3103d84d1eaf303918b05317fcc19feb6a90f265e3591297f2ce151d1425b
+  IIO_SENSOR_PROXY_SOURCE_RPM_URL: https://kojipkgs.fedoraproject.org/packages/iio-sensor-proxy/3.9/3.fc45/src/iio-sensor-proxy-3.9-3.fc45.src.rpm
+  IIO_SENSOR_PROXY_SOURCE_RPM_SHA256: 9ee53463f253b4ccd202211ea3dd8578349dc827de38c1f753c5c268bf3e5e0f
+  UPSTREAM_TAG: v1.5.0
+  UPSTREAM_COMMIT: a43f79c27444faff59576b1309e125f037448abc
 
 jobs:
   build:
@@ -39,10 +56,93 @@ jobs:
         run: |
           set -euxo pipefail
           dnf install -y \
-            curl dpkg dnf-plugins-core gzip patchelf rpm-build rpmdevtools \
+            cargo cpio curl dpkg dnf-plugins-core git gzip patch patchelf \
+            rpm-build rpmdevtools rust \
             systemd-rpm-macros tar unzip
+          dnf install -y --nogpgcheck \
+            --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
+            terra-release
           rpmdev-setuptree
           mkdir -p "$HOME/rpmbuild/tmp"
+
+      - name: Stage upstream source
+        run: |
+          set -euxo pipefail
+          source_tree="$RUNNER_TEMP/piano-mainline-source"
+          git clone --depth 1 --branch "$UPSTREAM_TAG" \
+            https://github.com/yzddmr6/xiaomipad-8pro-mainline "$source_tree"
+          test "$(git -C "$source_tree" rev-parse HEAD)" = "$UPSTREAM_COMMIT"
+          git -C "$source_tree" archive --format=tar.gz \
+            --prefix=piano-source/ --output "$HOME/rpmbuild/SOURCES/piano-source-$UPSTREAM_TAG.tar.gz" \
+            "$UPSTREAM_TAG" device/boot device/camera device/sensors device/virtualization \
+            packaging/piano-camerad packaging/piano-device-support \
+            packaging/piano-iio-sensor-proxy packaging/piano-sensors \
+            packaging/piano-crosvm packaging/piano-vm \
+            firmware/README.md firmware/sensors tools/piano-camera-test.py \
+            tools/crosvm.lock.json docs/VIRTUALIZATION.md \
+            docs/VIRTUALIZATION.zh-CN.md \
+            tools/build-persistent-boot.py tools/initramfs_archive.py \
+            LICENSE NOTICE LICENSES
+          "$source_tree/tools/fetch-aosp-mkbootimg.sh"
+          "$source_tree/tools/fetch-aosp-avb.sh"
+          install -m0644 "$source_tree/tools/local/aosp-mkbootimg/mkbootimg.py" \
+            "$HOME/rpmbuild/SOURCES/mkbootimg.py"
+          install -m0755 "$source_tree/tools/local/aosp-avb/avbtool.py" \
+            "$HOME/rpmbuild/SOURCES/avbtool.py"
+
+      - name: Stage crosvm source and vendor crates
+        run: |
+          set -euxo pipefail
+          crosvm_work="$RUNNER_TEMP/crosvm-work"
+          crosvm_src="$crosvm_work/src"
+          vendor_root="$crosvm_work/vendor-root"
+          mkdir -p "$crosvm_src" "$vendor_root"
+          curl --fail --location --retry 3 \
+            --output "$crosvm_work/crosvm-96e84c3.tar.gz" \
+            "$CROSVM_SOURCE_URL"
+          curl --fail --location --retry 3 \
+            --output "$crosvm_work/minijail-7845d899.tar.gz" \
+            "$MINIJAIL_SOURCE_URL"
+          echo "$CROSVM_SOURCE_SHA256  $crosvm_work/crosvm-96e84c3.tar.gz" |
+            sha256sum -c -
+          echo "$MINIJAIL_SOURCE_SHA256  $crosvm_work/minijail-7845d899.tar.gz" |
+            sha256sum -c -
+          tar -xzf "$crosvm_work/crosvm-96e84c3.tar.gz" \
+            --strip-components=1 -C "$crosvm_src"
+          echo "$CROSVM_CARGO_LOCK_PRE_PATCH_SHA256  $crosvm_src/Cargo.lock" |
+            sha256sum -c -
+          git init -q "$crosvm_src"
+          for patchfile in "$GITHUB_WORKSPACE"/piano-vm/patches/*.patch; do
+            git -C "$crosvm_src" apply "$patchfile"
+          done
+          cargo vendor --locked --versioned-dirs \
+            --manifest-path "$crosvm_src/Cargo.toml" \
+            "$vendor_root/cargo-vendor"
+          echo "$CROSVM_CARGO_LOCK_SHA256  $crosvm_src/Cargo.lock" |
+            sha256sum -c -
+          tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+            --transform='s,^Cargo.lock$,crosvm-Cargo.lock,' \
+            -czf "$HOME/rpmbuild/SOURCES/crosvm-vendor.tar.gz" \
+            -C "$vendor_root" cargo-vendor -C "$crosvm_src" Cargo.lock
+          install -m0644 "$crosvm_work/crosvm-96e84c3.tar.gz" \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0644 "$crosvm_work/minijail-7845d899.tar.gz" \
+            "$HOME/rpmbuild/SOURCES/"
+
+      - name: Stage Fedora iio-sensor-proxy source
+        run: |
+          set -euxo pipefail
+          source_dir="$RUNNER_TEMP/iio-sensor-proxy-source"
+          mkdir -p "$source_dir"
+          curl --fail --location --retry 3 \
+            --output "$source_dir/iio-sensor-proxy-3.9-3.fc45.src.rpm" \
+            "$IIO_SENSOR_PROXY_SOURCE_RPM_URL"
+          echo "$IIO_SENSOR_PROXY_SOURCE_RPM_SHA256  $source_dir/iio-sensor-proxy-3.9-3.fc45.src.rpm" |
+            sha256sum -c -
+          cd "$source_dir"
+          rpm2cpio iio-sensor-proxy-3.9-3.fc45.src.rpm | cpio -idm --quiet
+          install -m0644 iio-sensor-proxy-3.9.tar.bz2 \
+            "$HOME/rpmbuild/SOURCES/iio-sensor-proxy-3.9.tar.bz2"
 
       - name: Download and stage Debian payloads
         run: |
@@ -55,16 +155,31 @@ jobs:
             "$GUNYAHVM_SOURCE_URL"
           echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.3.0-source.tar.zst" |
             sha256sum -c -
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/casilda-1.4.0.tar.xz" \
+            "$CASILDA_SOURCE_URL"
+          echo "$CASILDA_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/casilda-1.4.0.tar.xz" |
+            sha256sum -c -
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/hexagonrpc-598b591a.tar.gz" \
+            "$HEXAGONRPC_SOURCE_URL"
+          echo "$HEXAGONRPC_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/hexagonrpc-598b591a.tar.gz" |
+            sha256sum -c -
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/qualcomm-iris-vaapi-4125b119.tar.gz" \
+            "$QUALCOMM_IRIS_SOURCE_URL"
+          echo "$QUALCOMM_IRIS_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/qualcomm-iris-vaapi-4125b119.tar.gz" |
+            sha256sum -c -
           unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
 
           device_deb=$(find /tmp/piano-packages -type f \
             -name 'piano-device-support_*.deb' -print -quit)
-          crosvm_deb=$(find /tmp/piano-packages -type f \
-            -name 'piano-crosvm_*.deb' -print -quit)
+          windows_deb=$(find /tmp/piano-packages -type f \
+            -name 'piano-vm-windows_*.deb' -print -quit)
           test -n "$device_deb"
-          test -n "$crosvm_deb"
+          test -n "$windows_deb"
           deb_root=$(dirname "$device_deb")
-          vm_root=$(dirname "$crosvm_deb")
+          vm_root=$(dirname "$windows_deb")
 
           stage_deb() {
             local rpm_name=$1
@@ -81,17 +196,9 @@ jobs:
           }
 
           stage_deb piano-device-support piano-device-support
-          stage_deb piano-sensors piano-sensors
-          stage_deb iio-sensor-proxy-ssc piano-iio-sensor-proxy
           stage_deb xiaomi-piano-firmware piano-local-firmware
-          stage_deb piano-camerad piano-camerad
-          stage_deb piano-iris-vaapi piano-iris-vaapi
-          stage_deb piano-crosvm piano-crosvm "$vm_root"
-          stage_deb piano-vm piano-vm "$vm_root"
           stage_deb piano-vm-windows piano-vm-windows "$vm_root"
           stage_deb gunyahvm gunyahvm
-          stage_deb libcasilda-1.0 libcasilda-1.0
-          stage_deb gir1.2-casilda-1.0 gir1.2-casilda-1.0
           stage_deb piano-npu-firmware piano-npu-firmware
           stage_deb qcom-npu-runtime qcom-npu-runtime
           stage_deb qcom-npu-demo-model qcom-npu-demo-model
@@ -120,6 +227,20 @@ jobs:
             "$HOME/rpmbuild/SOURCES/gunyahvm-macos-runtime.json"
           install -m0644 gunyahvm-windows/runtime.json \
             "$HOME/rpmbuild/SOURCES/gunyahvm-windows-runtime.json"
+          install -m0644 casilda/0001-forward-touch-to-wayland-clients.patch \
+            "$HOME/rpmbuild/SOURCES/0001-forward-touch-to-wayland-clients.patch"
+          install -m0644 casilda/0002-initialize-and-propagate-output-scale.patch \
+            "$HOME/rpmbuild/SOURCES/0002-initialize-and-propagate-output-scale.patch"
+          install -m0644 iio-sensor-proxy-ssc/patches/*.patch \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0644 piano-sensors/patches/*.patch \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0644 qualcomm-iris-vaapi/000*.patch \
+            "$HOME/rpmbuild/SOURCES/"
+          for patchfile in piano-vm/patches/*.patch; do
+            install -m0644 "$patchfile" \
+              "$HOME/rpmbuild/SOURCES/piano-vm-${patchfile##*/}"
+          done
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
             "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro.conf"
           install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro-HiFi.conf \
@@ -148,7 +269,7 @@ jobs:
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            piano-iris-vaapi/piano-iris-vaapi.spec \
+            qualcomm-iris-vaapi/qualcomm-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
@@ -160,7 +281,6 @@ jobs:
             gunyahvm-macos/gunyahvm-macos.spec \
             gunyahvm-windows/gunyahvm-windows.spec \
             casilda/casilda.spec \
-            qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do
             dnf builddep -y "$spec"
           done
@@ -170,7 +290,7 @@ jobs:
           set -euxo pipefail
           for spec in \
             xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
-            piano-iris-vaapi/piano-iris-vaapi.spec \
+            qualcomm-iris-vaapi/qualcomm-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
             piano-camerad/piano-camerad.spec \
@@ -182,7 +302,6 @@ jobs:
             gunyahvm-macos/gunyahvm-macos.spec \
             gunyahvm-windows/gunyahvm-windows.spec \
             casilda/casilda.spec \
-            qcom-npu/qcom-npu.spec \
             piano-vm/piano-vm.spec; do
             TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
               --define "_topdir $HOME/rpmbuild" "$spec"
@@ -210,9 +329,76 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  build-qcom-npu:
+    name: Build QCOM NPU payload RPMs (Fedora x86_64)
+    runs-on: ubuntu-24.04
+    container:
+      image: fedora:latest
+      options: --user 0
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install build tools
+        run: |
+          set -euxo pipefail
+          dnf install -y \
+            cpio curl dpkg dnf-plugins-core gzip rpm-build rpmdevtools \
+            systemd-rpm-macros tar unzip
+          rpmdev-setuptree
+          mkdir -p "$HOME/rpmbuild/tmp"
+
+      - name: Stage QCOM NPU payloads
+        run: |
+          set -euxo pipefail
+          curl --fail --location --retry 3 --output /tmp/piano-packages.zip \
+            "$PACKAGES_ZIP_URL"
+          echo "$PACKAGES_ZIP_SHA256  /tmp/piano-packages.zip" | sha256sum -c -
+          unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
+
+          stage_deb() {
+            local rpm_name=$1
+            local stem=$2
+            local deb work
+            deb=$(find /tmp/piano-packages -type f -name "${stem}_*.deb" -print -quit)
+            test -n "$deb"
+            work=$(mktemp -d)
+            dpkg-deb -x "$deb" "$work/payload"
+            tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
+              -czf "$HOME/rpmbuild/SOURCES/${rpm_name}-payload.tar.gz" -C "$work" payload
+            rm -rf "$work"
+          }
+
+          stage_deb piano-npu-firmware piano-npu-firmware
+          stage_deb qcom-npu-runtime qcom-npu-runtime
+          stage_deb qcom-npu-demo-model qcom-npu-demo-model
+
+      - name: Build RPMs
+        run: |
+          set -euxo pipefail
+          dnf builddep -y qcom-npu/qcom-npu.spec
+          rpmspec -P qcom-npu/qcom-npu.spec >/dev/null
+          TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
+            --target aarch64 --define "_topdir $HOME/rpmbuild" \
+            qcom-npu/qcom-npu.spec
+          find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" \
+            -type f -printf '%p %s bytes\n' | sort
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: qcom-npu-rpms
+          path: ~/rpmbuild/RPMS/**/*.rpm
+          if-no-files-found: error
+          retention-days: 14
+
   release:
     name: Create GitHub Release
-    needs: build
+    needs:
+      - build
+      - build-qcom-npu
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -225,7 +411,13 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: piano-rpms
-          path: rpms
+          path: rpms/aarch64
+
+      - name: Download QCOM NPU RPMs
+        uses: actions/download-artifact@v8
+        with:
+          name: qcom-npu-rpms
+          path: rpms/qcom-npu
 
       - name: Create Release
         uses: softprops/action-gh-release@v3

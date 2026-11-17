@@ -2,17 +2,19 @@
 
 Name:           piano-switch-slot
 Version:        1.5.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano local boot image hook and A/B slot switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
-ExclusiveArch:  aarch64
-Source0:        piano-device-support-payload.tar.gz
+BuildArch:      noarch
+Source0:        piano-source-v1.5.0.tar.gz
 Source1:        zz-piano-boot
 Source2:        piano-local-update
 Source3:        zz-piano-boot-postrm
 Source4:        sta
 Source5:        piano-switch-to-android.desktop
+Source6:        mkbootimg.py
+Source7:        avbtool.py
 Requires:       piano-device-support qbootctl
 Conflicts:      piano-switch-boot
 
@@ -21,7 +23,7 @@ Rebuild the current slot's boot images after a Piano kernel update. The sta
 command selects the other A/B slot and reboots; it does not inspect its content.
 
 %prep
-%autosetup -n payload
+%autosetup -n piano-source
 
 %build
 :
@@ -33,15 +35,17 @@ install -Dm755 %{SOURCE3} %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 install -Dm755 %{SOURCE4} %{buildroot}%{_sbindir}/sta
 install -Dm644 %{SOURCE5} \
     %{buildroot}%{_datadir}/applications/piano-switch-to-android.desktop
-install -d %{buildroot}%{_prefix}/lib/piano
-cp -a usr/lib/piano/boot %{buildroot}%{_prefix}/lib/piano/
+install -Dm755 tools/build-persistent-boot.py \
+    %{buildroot}%{_prefix}/lib/piano/boot/build-persistent-boot.py
+install -Dm644 tools/initramfs_archive.py \
+    %{buildroot}%{_prefix}/lib/piano/boot/initramfs_archive.py
+install -Dm644 %{SOURCE6} %{buildroot}%{_prefix}/lib/piano/boot/mkbootimg.py
+install -Dm755 %{SOURCE7} %{buildroot}%{_prefix}/lib/piano/boot/avbtool.py
 # The slot scheme uses only the common image builder, not the upstream
 # slot-A switch implementation.
-rm -f %{buildroot}%{_prefix}/lib/piano/boot/piano_bootslot.py
-rm -f %{buildroot}%{_prefix}/lib/piano/boot/switch-common.sh
-install -Dm644 usr/share/doc/piano-device-support/copyright \
+install -Dm644 LICENSE \
     %{buildroot}%{_datadir}/doc/%{name}/copyright
-install -Dm644 usr/share/doc/piano-device-support/NOTICE \
+install -Dm644 NOTICE \
     %{buildroot}%{_datadir}/doc/%{name}/NOTICE
 
 %files
@@ -55,6 +59,10 @@ install -Dm644 usr/share/doc/piano-device-support/NOTICE \
 %{_datadir}/applications/piano-switch-to-android.desktop
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-2
+- Build the local slot hook from upstream source and fixed AOSP helpers
+- Mark the architecture-independent package as noarch
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
 - Follow the v1.5.0 device payload; the local boot hook is unchanged
 

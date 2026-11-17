@@ -2,13 +2,30 @@
 
 Name:           libcasilda-1.0
 Version:        1.4.0
-Release:        1.gunyahvm2%{?dist}
-Summary:        GTK4 Wayland display library used by GunyahVM
-License:        LGPL-2.1-only
+Release:        1.gunyahvm3%{?dist}
+Summary:        Wayland compositor for GTK4
+License:        LGPL-2.1-only AND LGPL-2.1-or-later
 URL:            https://gitlab.gnome.org/jpu/casilda
 ExclusiveArch:  aarch64
-Source0:        libcasilda-1.0-payload.tar.gz
-Source1:        gir1.2-casilda-1.0-payload.tar.gz
+Source0:        https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz#/casilda-1.4.0.tar.xz
+Patch0:         0001-forward-touch-to-wayland-clients.patch
+Patch1:         0002-initialize-and-propagate-output-scale.patch
+BuildRequires:  gcc
+BuildRequires:  meson
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(epoxy)
+BuildRequires:  pkgconfig(gobject-introspection-1.0)
+BuildRequires:  pkgconfig(gtk4)
+BuildRequires:  pkgconfig(pixman-1)
+BuildRequires:  pkgconfig(wayland-protocols)
+BuildRequires:  pkgconfig(wayland-scanner)
+BuildRequires:  pkgconfig(wayland-server)
+BuildRequires:  pkgconfig(wlroots-0.20)
+BuildRequires:  pkgconfig(x11-xcb)
+BuildRequires:  pkgconfig(xkbcommon)
+BuildRequires:  pkgconfig(xkbcommon-x11)
+Provides:       casilda = %{version}-%{release}
+Obsoletes:      casilda < %{version}-%{release}
 Requires:       gtk4
 
 %description
@@ -22,35 +39,58 @@ Requires:       gtk4
 %description -n gir1.2-casilda-1.0
 GObject introspection typelib for the Casilda GTK4 library.
 
+%package devel
+Summary:        Development files for Casilda
+Requires:       libcasilda-1.0%{?_isa} = %{version}-%{release}
+Requires:       gir1.2-casilda-1.0%{?_isa} = %{version}-%{release}
+Requires:       gtk4-devel
+Requires:       wlroots-devel
+Provides:       casilda-devel = %{version}-%{release}
+Obsoletes:      casilda-devel < %{version}-%{release}
+
+%description devel
+Headers, pkg-config metadata and GObject introspection source for Casilda.
+
 %prep
-mkdir lib gir
-tar -xzf %{SOURCE0} -C lib
-tar -xzf %{SOURCE1} -C gir
+%autosetup -n casilda-%{version} -p1
 
 %build
-:
+%meson -Ddocumentation=false -Dvapi=false -Ddmabuf=true
+%meson_build
+
+%check
+# No upstream test suite yet.
 
 %install
-install -d %{buildroot}%{_libdir}
-cp -a lib/payload/usr/lib/aarch64-linux-gnu/libcasilda-1.0.so.* %{buildroot}%{_libdir}/
-install -Dm644 gir/payload/usr/lib/aarch64-linux-gnu/girepository-1.0/Casilda-1.0.typelib \
-    %{buildroot}%{_libdir}/girepository-1.0/Casilda-1.0.typelib
-install -Dm644 lib/payload/usr/share/doc/libcasilda-1.0/copyright \
-    %{buildroot}%{_datadir}/doc/libcasilda-1.0/copyright
-install -Dm644 lib/payload/usr/share/doc/libcasilda-1.0/changelog.Debian.gz \
-    %{buildroot}%{_datadir}/doc/libcasilda-1.0/changelog.Debian.gz
-install -Dm644 gir/payload/usr/share/doc/gir1.2-casilda-1.0/copyright \
-    %{buildroot}%{_datadir}/doc/gir1.2-casilda-1.0/copyright
+%meson_install
+install -Dm644 COPYING %{buildroot}%{_datadir}/doc/libcasilda-1.0/copyright
+install -Dm644 COPYING %{buildroot}%{_datadir}/doc/gir1.2-casilda-1.0/copyright
+install -Dm644 COPYING %{buildroot}%{_datadir}/doc/libcasilda-1.0-devel/copyright
 
 %files
+%doc README.md
 %license %{_datadir}/doc/libcasilda-1.0/copyright
-%doc %{_datadir}/doc/libcasilda-1.0/changelog.Debian.gz
+%dir %{_libdir}/girepository-1.0
 %{_libdir}/libcasilda-1.0.so.*
 
 %files -n gir1.2-casilda-1.0
 %license %{_datadir}/doc/gir1.2-casilda-1.0/copyright
 %{_libdir}/girepository-1.0/Casilda-1.0.typelib
 
+%files devel
+%license %{_datadir}/doc/libcasilda-1.0-devel/copyright
+%dir %{_includedir}/casilda
+%{_includedir}/casilda/*.h
+%{_libdir}/libcasilda-1.0.so
+%{_libdir}/pkgconfig/casilda-1.0.pc
+%dir %{_datadir}/gir-1.0
+%{_datadir}/gir-1.0/Casilda-1.0.gir
+
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-1.gunyahvm3
+- Build Casilda from source with its touch and output-scale fixes
+- Package headers, pkg-config metadata and GIR in libcasilda-1.0-devel
+- Replace Fedora's incompatible Casilda 1.0.0 package
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-1.gunyahvm2
 - Package the pinned Casilda runtime and introspection data for GunyahVM

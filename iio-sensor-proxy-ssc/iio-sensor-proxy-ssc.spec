@@ -2,72 +2,76 @@
 
 Name:           iio-sensor-proxy-ssc
 Version:        3.9+piano20261112.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        IIO sensor proxy with Qualcomm SSC support
 License:        GPL-3.0-or-later
 URL:            https://gitlab.freedesktop.org/hadess/iio-sensor-proxy
 ExclusiveArch:  aarch64
-Source0:        %{name}-payload.tar.gz
-BuildRequires:  patchelf systemd-rpm-macros
+Source0:        iio-sensor-proxy-3.9.tar.bz2
+Source1:        piano-source-v1.5.0.tar.gz
+Patch0000:      0003-iio-sensor-proxy-start-preclaimed-coldplug-sensor.patch
+Patch0001:      0004-iio-sensor-proxy-serialize-ssc-accel-polling.patch
+Patch0002:      0005-iio-sensor-proxy-cancel-released-pending-claims.patch
+Patch0003:      0006-iio-sensor-proxy-broadcast-sensor-availability.patch
+Patch0004:      0001-wait-for-discovery-notifications.patch
+Patch0005:      0007-iio-sensor-proxy-serialize-ssc-light-polling.patch
+Patch0006:      0008-iio-sensor-proxy-report-ssc-light-discovery-errors.patch
+Patch0007:      0009-iio-sensor-proxy-quiesce-callbacks-before-close.patch
+BuildRequires:  gcc
+BuildRequires:  meson
+BuildRequires:  ninja-build
+BuildRequires:  pkgconfig(gio-2.0)
+BuildRequires:  pkgconfig(gudev-1.0)
+BuildRequires:  pkgconfig(libssc)
+BuildRequires:  pkgconfig(polkit-gobject-1)
+BuildRequires:  pkgconfig(systemd)
+BuildRequires:  pkgconfig(udev)
+BuildRequires:  systemd-rpm-macros
 Provides:       iio-sensor-proxy%{?_isa}
 Provides:       piano-iio-sensor-proxy = %{version}-%{release}
 Conflicts:      iio-sensor-proxy
 Obsoletes:      iio-sensor-proxy < %{version}
-Obsoletes:      piano-iio-sensor-proxy
+Obsoletes:      piano-iio-sensor-proxy <= %{version}
 Requires:       dbus-daemon glib2 libgudev libqmi libqrtr-glib
 Requires:       polkit protobuf-c systemd systemd-udev
 
 %description
-The standard iio-sensor-proxy D-Bus service with SSC support and the pinned
-patched private libssc payload. Device-specific sensor ordering and rotation
+The standard iio-sensor-proxy D-Bus service with SSC support, linked to the
+distribution libssc library. Device-specific sensor ordering and rotation
 policy are supplied by the separate piano-sensors package.
 
 %prep
-%autosetup -n payload
+%autosetup -n iio-sensor-proxy-3.9 -p1
+tar -xzf %{SOURCE1}
 
 %build
-:
+%meson -Dgtk_doc=false -Dgtk-tests=false -Dssc-support=enabled
+%meson_build
 
 %install
-install -Dm755 usr/bin/monitor-sensor %{buildroot}%{_bindir}/monitor-sensor
-install -Dm755 usr/bin/piano-sensors-check %{buildroot}%{_bindir}/piano-sensors-check
-install -Dm755 usr/libexec/iio-sensor-proxy %{buildroot}%{_libexecdir}/iio-sensor-proxy
-install -Dm644 usr/lib/aarch64-linux-gnu/piano-iio-sensor-proxy/libssc.so.2 \
-    %{buildroot}%{_libdir}/iio-sensor-proxy-ssc/libssc.so.2
-patchelf --set-rpath %{_libdir}/iio-sensor-proxy-ssc \
-    %{buildroot}%{_libexecdir}/iio-sensor-proxy
-
-install -Dm644 usr/lib/systemd/system/iio-sensor-proxy.service \
-    %{buildroot}%{_unitdir}/iio-sensor-proxy.service
-install -Dm644 usr/lib/udev/rules.d/80-iio-sensor-proxy.rules \
-    %{buildroot}%{_udevrulesdir}/80-iio-sensor-proxy.rules
-install -Dm644 usr/share/dbus-1/system-services/net.hadess.SensorProxy.service \
+%meson_install
+integration=piano-source/packaging/piano-iio-sensor-proxy
+install -Dm644 "$integration/usr/lib/systemd/system/iio-sensor-proxy.service.d/piano.conf" \
+    %{buildroot}%{_unitdir}/iio-sensor-proxy.service.d/piano.conf
+install -Dm755 "$integration/usr/bin/piano-sensors-check" \
+    %{buildroot}%{_bindir}/piano-sensors-check
+install -Dm644 "$integration/usr/share/dbus-1/system-services/net.hadess.SensorProxy.service" \
     %{buildroot}%{_datadir}/dbus-1/system-services/net.hadess.SensorProxy.service
-install -Dm644 usr/share/dbus-1/system.d/net.hadess.SensorProxy.conf \
-    %{buildroot}%{_datadir}/dbus-1/system.d/net.hadess.SensorProxy.conf
-install -Dm644 usr/share/polkit-1/actions/net.hadess.SensorProxy.policy \
-    %{buildroot}%{_datadir}/polkit-1/actions/net.hadess.SensorProxy.policy
-install -Dm644 usr/share/man/man1/monitor-sensor.1.gz \
-    %{buildroot}%{_mandir}/man1/monitor-sensor.1.gz
-install -Dm644 usr/share/man/man1/piano-sensors-check.1.gz \
-    %{buildroot}%{_mandir}/man1/piano-sensors-check.1.gz
-
-install -Dm644 usr/share/doc/piano-iio-sensor-proxy/copyright \
-    %{buildroot}%{_datadir}/doc/%{name}/copyright
-install -Dm644 usr/share/doc/piano-iio-sensor-proxy/NOTICE \
-    %{buildroot}%{_datadir}/doc/%{name}/NOTICE
-install -Dm644 usr/share/doc/piano-iio-sensor-proxy/sources.json \
-    %{buildroot}%{_datadir}/doc/%{name}/sources.json
+install -Dm644 "$integration/usr/share/man/man1/monitor-sensor.1" \
+    %{buildroot}%{_mandir}/man1/monitor-sensor.1
+install -Dm644 "$integration/usr/share/man/man1/piano-sensors-check.1" \
+    %{buildroot}%{_mandir}/man1/piano-sensors-check.1
+install -Dm644 piano-source/NOTICE %{buildroot}%{_datadir}/doc/%{name}/NOTICE
 
 %files
-%license %{_datadir}/doc/%{name}/copyright
+%license COPYING
 %doc %{_datadir}/doc/%{name}/NOTICE
-%doc %{_datadir}/doc/%{name}/sources.json
+%doc README.md
 %{_bindir}/monitor-sensor
 %{_bindir}/piano-sensors-check
 %{_libexecdir}/iio-sensor-proxy
-%{_libdir}/iio-sensor-proxy-ssc/libssc.so.2
 %{_unitdir}/iio-sensor-proxy.service
+%{_unitdir}/iio-sensor-proxy.service.d
 %{_udevrulesdir}/80-iio-sensor-proxy.rules
 %{_datadir}/dbus-1/system-services/net.hadess.SensorProxy.service
 %{_datadir}/dbus-1/system.d/net.hadess.SensorProxy.conf
@@ -92,6 +96,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 3.9+piano20261112.1-2
+- Build iio-sensor-proxy from source with the pinned SSC fixes
+- Use Terra libssc instead of bundling a private copy
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 3.9+piano20261112.1-1
 - Update the v1.3.0 sensor proxy payload
 
