@@ -42,7 +42,7 @@
 -    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=env)
 -    run(['aarch64-linux-gnu-g++','-std=c++17','-O3','-Wall','-Wextra','-I'+str(llama/'include'),'-I'+str(llama/'ggml/include'),
 +    # The nested Hexagon compiler cannot consume Fedora or ARM cross-build flags.
-+    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=dict(env,CFLAGS='',CXXFLAGS='',LDFLAGS=''))
++    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=dict(env,CFLAGS=f'-ffile-prefix-map={b}=.',CXXFLAGS=f'-ffile-prefix-map={b}=.',LDFLAGS=''))
 +    run(['aarch64-linux-gnu-g++',sysroot,'-isystem',str(cxx_root),'-isystem',str(cxx_target),'-std=c++17','-O3','-Wall','-Wextra','-I'+str(llama/'include'),'-I'+str(llama/'ggml/include'),
           ASSETS/'hybrid.cpp','-L'+str(build/'bin'),'-Wl,-rpath,$ORIGIN','-Wl,-rpath-link,'+str(build/'bin'),'-lllama','-lggml','-lggml-base','-o',build/'bin/npu-hybrid'],env=env)
      stage=b/'runtime';stage.mkdir()
