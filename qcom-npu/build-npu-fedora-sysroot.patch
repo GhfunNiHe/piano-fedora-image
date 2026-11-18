@@ -40,8 +40,8 @@
 +         '-DCMAKE_C_FLAGS=--sysroot='+str(dep)+' -ffile-prefix-map='+str(b)+'=.','-DCMAKE_CXX_FLAGS=--sysroot='+str(dep)+' '+cxx_headers+' -DPATH_MAX=4096 -ffile-prefix-map='+str(b)+'=.'],env=env)
      # Select just v79; the other upstream ExternalProject targets are not needed on SM8750.
 -    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=env)
-+    # The nested Hexagon compiler cannot consume Fedora's linker hardening flags.
-+    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=dict(env,LDFLAGS=''))
++    # The nested Hexagon compiler cannot consume Fedora or ARM cross-build flags.
++    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=dict(env,CFLAGS='',CXXFLAGS='',LDFLAGS=''))
      run(['aarch64-linux-gnu-g++','-std=c++17','-O3','-Wall','-Wextra','-I'+str(llama/'include'),'-I'+str(llama/'ggml/include'),
           ASSETS/'hybrid.cpp','-L'+str(build/'bin'),'-Wl,-rpath,$ORIGIN','-Wl,-rpath-link,'+str(build/'bin'),'-lllama','-lggml','-lggml-base','-o',build/'bin/npu-hybrid'],env=env)
      stage=b/'runtime';stage.mkdir()
