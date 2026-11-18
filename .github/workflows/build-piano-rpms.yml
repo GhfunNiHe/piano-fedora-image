@@ -479,9 +479,14 @@ jobs:
           set -euxo pipefail
           dnf builddep -y qcom-npu/qcom-npu.spec
           rpmspec -P qcom-npu/qcom-npu.spec >/dev/null
-          TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
+          if ! TMPDIR="$HOME/rpmbuild/tmp" rpmbuild -ba --nodebuginfo \
             --target aarch64 --define "_topdir $HOME/rpmbuild" \
-            qcom-npu/qcom-npu.spec
+            qcom-npu/qcom-npu.spec; then
+            find "$HOME/rpmbuild/BUILD" \
+              -path '*/source/fastrpc/*/config.log' -type f \
+              -exec sh -c 'echo "--- FastRPC config.log: $1 ---"; tail -n 160 "$1"' _ {} \;
+            exit 1
+          fi
           find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" \
             -type f -printf '%p %s bytes\n' | sort
 
