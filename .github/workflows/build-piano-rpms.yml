@@ -38,8 +38,8 @@ env:
   AOSP_MKBOOTIMG_COMMIT: 4a27dd13adf9846e12d585d6fe99a375ebb58396
   AOSP_MKBOOTIMG_SHA256: 37d84b3d162e0bc62e36c1f4e1c63c85ea0caa9f29be023eb2f8efe006ad948c
   AOSP_UNPACK_BOOTIMG_SHA256: 06b54dd9a07c5281778e29e234e76f6e3faee8bf0c904a5ef88fdee30eeed12e
-  IIO_SENSOR_PROXY_SOURCE_RPM_URL: https://kojipkgs.fedoraproject.org/packages/iio-sensor-proxy/3.9/3.fc45/src/iio-sensor-proxy-3.9-3.fc45.src.rpm
-  IIO_SENSOR_PROXY_SOURCE_RPM_SHA256: 9ee53463f253b4ccd202211ea3dd8578349dc827de38c1f753c5c268bf3e5e0f
+  IIO_SENSOR_PROXY_SOURCE_URL: https://deb.debian.org/debian/pool/main/i/iio-sensor-proxy/iio-sensor-proxy_3.9.orig.tar.bz2
+  IIO_SENSOR_PROXY_SOURCE_SHA256: 19a4ae99b1b8af603fc789841025f9747bf445418d69ec7389e75adb6c8186bf
   UPSTREAM_TAG: v1.5.0
   UPSTREAM_COMMIT: a43f79c27444faff59576b1309e125f037448abc
 
@@ -160,6 +160,9 @@ jobs:
           for patchfile in "$GITHUB_WORKSPACE"/piano-vm/patches/*.patch; do
             git -C "$crosvm_src" apply "$patchfile"
           done
+          mkdir -p "$crosvm_src/third_party/minijail"
+          tar -xzf "$crosvm_work/minijail-7845d899.tar.gz" \
+            --strip-components=1 -C "$crosvm_src/third_party/minijail"
           cargo vendor --locked --versioned-dirs \
             --manifest-path "$crosvm_src/Cargo.toml" \
             "$vendor_root/cargo-vendor"
@@ -174,20 +177,14 @@ jobs:
           install -m0644 "$crosvm_work/minijail-7845d899.tar.gz" \
             "$HOME/rpmbuild/SOURCES/"
 
-      - name: Stage Fedora iio-sensor-proxy source
+      - name: Stage iio-sensor-proxy upstream source
         run: |
           set -euxo pipefail
-          source_dir="$RUNNER_TEMP/iio-sensor-proxy-source"
-          mkdir -p "$source_dir"
           curl --fail --location --retry 3 \
-            --output "$source_dir/iio-sensor-proxy-3.9-3.fc45.src.rpm" \
-            "$IIO_SENSOR_PROXY_SOURCE_RPM_URL"
-          echo "$IIO_SENSOR_PROXY_SOURCE_RPM_SHA256  $source_dir/iio-sensor-proxy-3.9-3.fc45.src.rpm" |
+            --output "$HOME/rpmbuild/SOURCES/iio-sensor-proxy-3.9.tar.bz2" \
+            "$IIO_SENSOR_PROXY_SOURCE_URL"
+          echo "$IIO_SENSOR_PROXY_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/iio-sensor-proxy-3.9.tar.bz2" |
             sha256sum -c -
-          cd "$source_dir"
-          rpm2cpio iio-sensor-proxy-3.9-3.fc45.src.rpm | cpio -idm --quiet
-          install -m0644 iio-sensor-proxy-3.9.tar.bz2 \
-            "$HOME/rpmbuild/SOURCES/iio-sensor-proxy-3.9.tar.bz2"
 
       - name: Download and stage Debian payloads
         run: |
@@ -474,6 +471,8 @@ jobs:
             --lock "$source_tree/packaging/npu/sources.json" \
             --output "$HOME/npu-inputs"
           install -m0644 "$HOME/npu-inputs/"* "$HOME/rpmbuild/SOURCES/"
+          install -m0644 qcom-npu/build-npu-fedora-sysroot.patch \
+            "$HOME/rpmbuild/SOURCES/"
 
       - name: Build RPMs
         run: |
