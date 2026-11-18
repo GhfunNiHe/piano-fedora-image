@@ -85,7 +85,7 @@ NPU_SYSROOT=%{_builddir}/fedora-aarch64-sysroot \
     --jobs %{_smp_build_ncpus}
 
 %install
-mkdir runtime firmware model
+mkdir -p runtime firmware model
 dpkg-deb -x %{_builddir}/npu-output/qcom-npu-runtime_*_arm64.deb runtime
 dpkg-deb -x %{_builddir}/npu-output/piano-npu-firmware_*_all.deb firmware
 dpkg-deb -x %{_builddir}/npu-output/qcom-npu-demo-model_*_arm64.deb model
