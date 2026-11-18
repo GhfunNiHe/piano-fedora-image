@@ -484,7 +484,7 @@ jobs:
             qcom-npu/qcom-npu.spec; then
             find "$HOME/rpmbuild/BUILD" \
               -path '*/source/fastrpc/*/config.log' -type f \
-              -exec sh -c 'echo "--- FastRPC config.log: $1 ---"; tail -n 160 "$1"' _ {} \;
+              -exec sh -c 'echo "--- FastRPC compiler probe: $1 ---"; grep -n -B 6 -A 25 -E "checking whether the C compiler works|cannot find|undefined reference|collect2|fatal error|error:|ld:" "$1" | tail -n 240 || true' _ {} \;
             exit 1
           fi
           find "$HOME/rpmbuild/RPMS" "$HOME/rpmbuild/SRPMS" \
