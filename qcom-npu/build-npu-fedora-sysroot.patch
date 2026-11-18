@@ -27,7 +27,7 @@
      run(['bash','./autogen.sh'],cwd=rpc,env=rpc_env)
      run(['bash','./configure','--host=aarch64-linux-gnu','--prefix=/usr','--libdir=/usr/lib/aarch64-linux-gnu','--with-config-base-dir=/usr/share/qcom'],cwd=rpc,env=rpc_env)
      run(['make','-j'+str(a.jobs)],cwd=rpc,env=rpc_env)
-@@ -79,11 +84,12 @@
+@@ -79,13 +84,15 @@
      build=b/'llama-build'
      run(['cmake','-S',llama,'-B',build,'-G','Ninja','-DCMAKE_SYSTEM_NAME=Linux','-DCMAKE_SYSTEM_PROCESSOR=aarch64',
           '-DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc','-DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++','-DCMAKE_BUILD_TYPE=Release',
@@ -39,5 +39,9 @@
 -         '-DCMAKE_C_FLAGS=-ffile-prefix-map='+str(b)+'=.','-DCMAKE_CXX_FLAGS=-ffile-prefix-map='+str(b)+'=.'],env=env)
 +         '-DCMAKE_C_FLAGS=--sysroot='+str(dep)+' -ffile-prefix-map='+str(b)+'=.','-DCMAKE_CXX_FLAGS=--sysroot='+str(dep)+' '+cxx_headers+' -DPATH_MAX=4096 -ffile-prefix-map='+str(b)+'=.'],env=env)
      # Select just v79; the other upstream ExternalProject targets are not needed on SM8750.
-     run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=env)
+-    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=env)
++    # The nested Hexagon compiler cannot consume Fedora's linker hardening flags.
++    run(['cmake','--build',build,'--target','llama-completion','llama-bench','htp-v79','-j'+str(a.jobs)],env=dict(env,LDFLAGS=''))
      run(['aarch64-linux-gnu-g++','-std=c++17','-O3','-Wall','-Wextra','-I'+str(llama/'include'),'-I'+str(llama/'ggml/include'),
+          ASSETS/'hybrid.cpp','-L'+str(build/'bin'),'-Wl,-rpath,$ORIGIN','-Wl,-rpath-link,'+str(build/'bin'),'-lllama','-lggml','-lggml-base','-o',build/'bin/npu-hybrid'],env=env)
+     stage=b/'runtime';stage.mkdir()
