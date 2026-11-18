@@ -34,6 +34,7 @@ BuildRequires:  patchelf
 BuildRequires:  pkgconf-pkg-config
 BuildRequires:  pkgconfig(gbm)
 BuildRequires:  python3
+BuildRequires:  python3-pyyaml
 BuildRequires:  rust
 BuildRequires:  systemd-devel
 BuildRequires:  vulkan-loader-devel

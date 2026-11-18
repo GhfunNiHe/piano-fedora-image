@@ -443,14 +443,26 @@ jobs:
             --releasever="$target_release" \
             --forcearch=aarch64 \
             --destdir="$sysroot_rpms" \
-            filesystem glibc glibc-common glibc-devel kernel-headers libgcc \
+            filesystem glibc glibc-common glibc-devel kernel-headers libatomic libgcc \
             libstdc++ libstdc++-devel libxcrypt libxcrypt-devel
           for rpmfile in "$sysroot_rpms"/*.rpm; do
             rpm2cpio "$rpmfile" | cpio -idm --quiet -D "$sysroot"
           done
           test -L "$sysroot/lib64"
+          ln -sfn libatomic.so.1 "$sysroot/usr/lib64/libatomic.so"
           ln -s libgcc_s.so.1 "$sysroot/usr/lib64/libgcc_s.so"
           ln -s libstdc++.so.6 "$sysroot/usr/lib64/libstdc++.so"
+          for libdir in "$sysroot/usr/lib64" "$sysroot/usr/lib/aarch64-linux-gnu"; do
+            mkdir -p "$libdir"
+            if [ "$libdir" = "$sysroot/usr/lib/aarch64-linux-gnu" ]; then
+              ln -sfn ../../lib64/libatomic.so.1 "$libdir/libatomic.so"
+            fi
+            cat > "$libdir/libatomic_asneeded.so" <<'EOF'
+          /* GNU ld script
+             Add DT_NEEDED entry for -latomic only if needed. */
+          INPUT ( AS_NEEDED ( -latomic ) )
+          EOF
+          done
           tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
             -czf "$HOME/rpmbuild/SOURCES/fedora-aarch64-sysroot.tar.gz" \
             -C "$sysroot" .
