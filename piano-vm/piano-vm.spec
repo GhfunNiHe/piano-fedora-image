@@ -137,7 +137,7 @@ export PKG_VERSION=96e84c3f680e-iceland-7ae498c2-piano-product3
 export DEFAULT_PIVOT_ROOT="%{_datadir}/piano/crosvm/empty"
 export MINIJAIL_BINDGEN_TARGET=aarch64-unknown-linux-gnu
 
-%{__cargo} build --release --frozen --offline \
+cargo build --release --frozen --offline \
     --target aarch64-unknown-linux-gnu \
     --no-default-features --features gunyah,net,vnc \
     --bin crosvm
