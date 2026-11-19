@@ -7,8 +7,9 @@ Summary:        Linux guest kernel and Mesa payload for GunyahVM
 License:        GPL-2.0-only AND MIT
 URL:            https://github.com/yzddmr6/GunyahVM
 ExclusiveArch:  aarch64
-Source0:        gunyahvm-payload.tar.gz
+Source0:        gunyahvm.deb
 Source1:        gunyahvm-guest-linux-runtime.json
+BuildRequires:  dpkg
 
 Requires:       gunyahvm
 Provides:       gunyahvm-guest-kernel
@@ -21,12 +22,14 @@ The pinned Linux 7.2.15-gvm63 guest kernel, initrd, modules and Mesa payload
 used by GunyahVM virtual machines.
 
 %prep
-%autosetup -n payload
+mkdir -p payload
+dpkg-deb -x %{SOURCE0} payload
 
 %build
 :
 
 %install
+cd payload
 install -d %{buildroot}%{_datadir}/gunyahvm
 cp -a usr/share/gunyahvm/guest %{buildroot}%{_datadir}/gunyahvm/
 install -Dm644 %{SOURCE1} \

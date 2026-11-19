@@ -3,8 +3,8 @@
 %global __requires_exclude ^libvirglrenderer\\.so\\.1
 
 Name:           gunyahvm
-Version:        1.3.0
-Release:        2%{?dist}
+Version:        1.5.0
+Release:        1%{?dist}
 Summary:        Linux, Windows and macOS virtual machines on Qualcomm Gunyah
 License:        GPL-2.0-only AND MIT AND BSD-2-Clause-Patent AND Apache-2.0
 URL:            https://github.com/yzddmr6/GunyahVM
@@ -266,6 +266,9 @@ for process in Path('/proc').glob('[0-9]*'):
 PY
 
 %changelog
+* Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
+- Update GunyahVM from its pinned v1.5.0 source release
+
 * Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.3.0-2
 - Build crosvm and virglrenderer from the pinned upstream source archive
 - Split guest Linux, macOS and Windows payloads into companion packages

@@ -15,8 +15,8 @@ ExclusiveArch:  aarch64
 Source0:        crosvm-96e84c3.tar.gz
 Source1:        minijail-7845d899.tar.gz
 Source2:        crosvm-vendor.tar.gz
-Source3:        piano-vm-windows-payload.tar.gz
-Source4:        piano-source-v1.5.0.tar.gz
+Source3:        piano-vm-windows.deb
+Source4:        piano-source-v1.6.1.tar.gz
 
 Patch0001:      piano-vm-0001-gunyah-runtime-GuestAccept-blob-sharing-for-protecte.patch
 Patch0002:      piano-vm-0002-gpu-iceland-gvm-scanout-copy-path-by-default-window-.patch
@@ -52,6 +52,7 @@ Patch0031:      piano-vm-0031-crosvm-quiet-closed-shutdown-channel.patch
 Patch0032:      piano-vm-0032-crosvm-bound-device-child-exit-wait.patch
 
 BuildRequires:  cargo
+BuildRequires:  dpkg
 BuildRequires:  clang-devel
 BuildRequires:  gcc
 BuildRequires:  gcc-c++
@@ -122,7 +123,8 @@ directory = "%{crosvm_vendor_dir}"
 EOF
 
 tar -xzf %{SOURCE2} -C %{_builddir}
-tar -xzf %{SOURCE3} -C %{_builddir}
+mkdir -p %{_builddir}/payload
+dpkg-deb -x %{SOURCE3} %{_builddir}/payload
 tar -xzf %{SOURCE4} -C %{_builddir}
 install -m0644 %{_builddir}/crosvm-Cargo.lock Cargo.lock
 echo "3dd3103d84d1eaf303918b05317fcc19feb6a90f265e3591297f2ce151d1425b  Cargo.lock" |

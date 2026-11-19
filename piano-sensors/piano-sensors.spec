@@ -8,7 +8,7 @@ License:        GPL-3.0-or-later AND LicenseRef-Proprietary
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        https://github.com/linux-msm/hexagonrpc/archive/598b591ae9da6a6cfe2ca5ea78998019ca6395ea.tar.gz#/hexagonrpc-598b591a.tar.gz
-Source1:        piano-source-v1.5.0.tar.gz
+Source1:        piano-source-v1.6.1.tar.gz
 Patch0000:      0001-fix-type-sequence-marshalling.patch
 Patch0001:      0002-avoid-unaligned-metadata-store-and-null-test-comparison.patch
 Patch0002:      0003-serve-odm-and-explicit-scratch-registry.patch

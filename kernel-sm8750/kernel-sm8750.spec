@@ -4,15 +4,15 @@
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT 1c21cb9895d69c1c5e83ceae68952fedf522644a
-%global KERNEL_SHORT 1c21cb9
+%global KERNEL_COMMIT da4b783e34bd05d7451a6f904fbf567af1215f99
+%global KERNEL_SHORT da4b783
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        4.piano%{?dist}
+Release:        5.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
@@ -44,7 +44,7 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.5.0 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.1 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
 UFS BSG settings. The package assembles the piano boot DTB from the freshly
@@ -154,6 +154,12 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-5.piano
+- Update to kernel commit da4b783 from the v1.6.1 release
+- Replace the base config with the one extracted from its compiled linux-image package
+- Retain only the requested settings missing from that upstream config
+- Confirm the enabled ASoC patch applies cleanly and is not already implemented
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-4.piano
 - Update to the v1.5.0 kernel commit and exact config from its compiled linux-image package
 

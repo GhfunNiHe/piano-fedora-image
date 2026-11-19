@@ -7,8 +7,9 @@ Summary:        macOS host runtime and boot kit for GunyahVM
 License:        GPL-2.0-only AND MIT AND BSD-2-Clause-Patent AND Apache-2.0
 URL:            https://github.com/yzddmr6/GunyahVM
 ExclusiveArch:  aarch64
-Source0:        gunyahvm-payload.tar.gz
+Source0:        gunyahvm.deb
 Source1:        gunyahvm-macos-runtime.json
+BuildRequires:  dpkg
 
 Requires:       gunyahvm
 
@@ -18,12 +19,14 @@ No Apple software is included; the application downloads Apple-controlled
 files directly on the device.
 
 %prep
-%autosetup -n payload
+mkdir -p payload
+dpkg-deb -x %{SOURCE0} payload
 
 %build
 :
 
 %install
+cd payload
 install -d %{buildroot}%{_prefix}/lib/gunyahvm
 cp -a usr/lib/gunyahvm/macos %{buildroot}%{_prefix}/lib/gunyahvm/
 install -Dm644 %{SOURCE1} \

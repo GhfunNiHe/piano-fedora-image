@@ -7,8 +7,9 @@ Summary:        Windows firmware and driver payload for GunyahVM
 License:        GPL-2.0-only AND BSD-2-Clause-Patent AND Apache-2.0
 URL:            https://github.com/yzddmr6/GunyahVM
 ExclusiveArch:  aarch64
-Source0:        gunyahvm-payload.tar.gz
+Source0:        gunyahvm.deb
 Source1:        gunyahvm-windows-runtime.json
+BuildRequires:  dpkg
 
 Requires:       gunyahvm
 
@@ -17,12 +18,14 @@ The pinned Gunyah UEFI firmware, signed Windows virtio drivers and offline
 OpenSSH payload used by GunyahVM when preparing Windows virtual machines.
 
 %prep
-%autosetup -n payload
+mkdir -p payload
+dpkg-deb -x %{SOURCE0} payload
 
 %build
 :
 
 %install
+cd payload
 install -d %{buildroot}%{_datadir}/gunyahvm
 cp -a usr/share/gunyahvm/windows %{buildroot}%{_datadir}/gunyahvm/
 install -Dm644 %{SOURCE1} \

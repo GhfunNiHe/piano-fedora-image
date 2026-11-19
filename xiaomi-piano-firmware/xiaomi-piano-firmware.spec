@@ -8,7 +8,8 @@ Summary:        Firmware for Xiaomi Pad 8 Pro (piano)
 License:        LicenseRef-Proprietary-Firmware
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 BuildArch:      noarch
-Source0:        %{name}-payload.tar.gz
+Source0:        xiaomi-piano-firmware.deb
+BuildRequires:  dpkg
 Provides:       piano-local-firmware = %{version}-%{release}
 Obsoletes:      piano-local-firmware <= %{version}-%{release}
 
@@ -18,12 +19,14 @@ Firmware and static hardware configuration for the Xiaomi Pad 8 Pro
 recorded by the mainline integration project.
 
 %prep
-%autosetup -n payload
+mkdir -p payload
+dpkg-deb -x %{SOURCE0} payload
 
 %build
 :
 
 %install
+cd payload
 mkdir -p %{buildroot}%{_firmwaredir}
 cp -a usr/lib/firmware/. %{buildroot}%{_firmwaredir}/
 install -Dm644 usr/share/doc/piano-local-firmware/copyright \

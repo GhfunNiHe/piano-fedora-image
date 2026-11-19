@@ -1,23 +1,24 @@
 %global debug_package %{nil}
 
 Name:           piano-device-support
-Version:        1.5.0
+Version:        1.6.1
 Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        %{name}-payload.tar.gz
+Source0:        piano-device-support.deb
 Source1:        Xiaomi-Pad-8-Pro.conf
 Source2:        Xiaomi-Pad-8-Pro-HiFi.conf
 Source3:        Piano-Capture-Diag.conf
 Source4:        Piano-Capture-Diag-HiFi.conf
 Source5:        50-piano-speaker-upmix.conf
-Source6:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service#/piano-speaker-rotation.service
-Source7:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/device/audio/speaker-rotation/speaker-rotation.py#/piano-speaker-rotation.py
-Source8:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json#/piano-speaker-rotation-config.json
-Source9:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0/packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf#/55-piano-speaker-rotation.conf
+Source6:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service#/piano-speaker-rotation.service
+Source7:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/device/audio/speaker-rotation/speaker-rotation.py#/piano-speaker-rotation.py
+Source8:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json#/piano-speaker-rotation-config.json
+Source9:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf#/55-piano-speaker-rotation.conf
 BuildRequires:  systemd-rpm-macros
+BuildRequires:  dpkg
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       v4l-utils
 Requires:       pipewire-utils
@@ -33,12 +34,14 @@ and pen support, infrared and charging helpers, power/sleep policy,
 and developer mode. Kernel boot policy is supplied by a separate hook package.
 
 %prep
-%autosetup -n payload
+mkdir -p payload
+dpkg-deb -x %{SOURCE0} payload
 
 %build
 :
 
 %install
+cd payload
 install -d %{buildroot}%{_prefix}
 cp -a usr/. %{buildroot}%{_prefix}/
 cp -a etc/. %{buildroot}/etc/
@@ -174,6 +177,9 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-1
+- Track piano-device-support 1.6.1 from the signed upstream APT archive
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
 - Update the device payload to v1.5.0
 - Add charge pause control and speaker rotation hardware policy

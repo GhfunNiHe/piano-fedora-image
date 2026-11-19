@@ -18,10 +18,13 @@ permissions:
   contents: read
 
 env:
-  PACKAGES_ZIP_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/v1.5.0/piano-ubuntu-v1.5.0-packages.zip
-  PACKAGES_ZIP_SHA256: ad74f05a060187b0e006079568d2b9f27272c05efc4bb7dc6964b200eeae32b9
-  GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.3.0/gunyahvm-1.3.0-source.tar.zst
-  GUNYAHVM_SOURCE_SHA256: 0e580ddaea3274614d2d8f2b29c46541936807de662d0a0be84ac7f0776a6d49
+  APT_REPO_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/apt
+  APT_INRELEASE_SHA256: 42c4a3fca9154cfefa3a31407572e41859c21daa07515878ec55972c6c74e919
+  APT_PACKAGES_SHA256: c2ce050090070b692b75f104a852a69cae49332e0f0b6abece6274aae8f68088
+  APT_KEYRING_URL: https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/aa4095a02c8455dfabc3dc42a8bacdb11bacab6b/packaging/piano-archive-keyring/usr/share/keyrings/piano-archive-keyring.gpg
+  APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
+  GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.0/gunyahvm-1.5.0-source.tar.zst
+  GUNYAHVM_SOURCE_SHA256: 2e2a06ce30f5897b2c44e3220472fa4308fd59fe5f4794d21fed4c1be82e3669
   CASILDA_SOURCE_URL: https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz
   CASILDA_SOURCE_SHA256: 63d85aa795f27ee5e5404ec7d8f6d955874f131bbff6ff9e6efe904d415a362c
   HEXAGONRPC_SOURCE_URL: https://github.com/linux-msm/hexagonrpc/archive/598b591ae9da6a6cfe2ca5ea78998019ca6395ea.tar.gz
@@ -40,8 +43,8 @@ env:
   AOSP_UNPACK_BOOTIMG_SHA256: 06b54dd9a07c5281778e29e234e76f6e3faee8bf0c904a5ef88fdee30eeed12e
   IIO_SENSOR_PROXY_SOURCE_URL: https://deb.debian.org/debian/pool/main/i/iio-sensor-proxy/iio-sensor-proxy_3.9.orig.tar.bz2
   IIO_SENSOR_PROXY_SOURCE_SHA256: 19a4ae99b1b8af603fc789841025f9747bf445418d69ec7389e75adb6c8186bf
-  UPSTREAM_TAG: v1.5.0
-  UPSTREAM_COMMIT: a43f79c27444faff59576b1309e125f037448abc
+  UPSTREAM_TAG: v1.6.1
+  UPSTREAM_COMMIT: aa4095a02c8455dfabc3dc42a8bacdb11bacab6b
 
 jobs:
   build:
@@ -60,7 +63,7 @@ jobs:
         run: |
           set -euxo pipefail
           dnf install -y \
-            cargo ccache cpio curl dpkg dnf-plugins-core git gzip patch patchelf \
+            cargo ccache cpio curl dpkg dnf-plugins-core git gnupg2-verify gzip patch patchelf \
             rpm-build rpmdevtools rust \
             sccache systemd-rpm-macros tar unzip
           dnf install -y --nogpgcheck \
@@ -186,16 +189,78 @@ jobs:
           echo "$IIO_SENSOR_PROXY_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/iio-sensor-proxy-3.9.tar.bz2" |
             sha256sum -c -
 
-      - name: Download and stage Debian payloads
+      - name: Download and stage Debian RPM sources
         run: |
           set -euxo pipefail
-          curl --fail --location --retry 3 --output /tmp/piano-packages.zip \
-            "$PACKAGES_ZIP_URL"
-          echo "$PACKAGES_ZIP_SHA256  /tmp/piano-packages.zip" | sha256sum -c -
+          apt_root="$GITHUB_WORKSPACE/build-work/apt"
+          deb_root="$apt_root/debs"
+          mkdir -p "$deb_root"
           curl --fail --location --retry 3 \
-            --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.3.0-source.tar.zst" \
+            --output "$apt_root/InRelease" "$APT_REPO_URL/InRelease"
+          curl --fail --location --retry 3 \
+            --output "$apt_root/Packages" "$APT_REPO_URL/Packages"
+          curl --fail --location --retry 3 \
+            --output "$apt_root/piano-archive-keyring.gpg" "$APT_KEYRING_URL"
+          echo "$APT_INRELEASE_SHA256  $apt_root/InRelease" | sha256sum -c -
+          echo "$APT_PACKAGES_SHA256  $apt_root/Packages" | sha256sum -c -
+          echo "$APT_KEYRING_SHA256  $apt_root/piano-archive-keyring.gpg" | sha256sum -c -
+          gpgv --keyring "$apt_root/piano-archive-keyring.gpg" "$apt_root/InRelease"
+          python3 - "$apt_root/InRelease" "$apt_root/Packages" "$APT_PACKAGES_SHA256" <<'PY'
+          import hashlib, re, sys
+
+          inrelease = open(sys.argv[1], "rb").read().decode()
+          packages = open(sys.argv[2], "rb").read()
+          expected = sys.argv[3]
+          match = re.search(r"^\s*([0-9a-f]{64})\s+(\d+)\s+Packages\s*$", inrelease, re.M)
+          if not match or match.group(1) != expected:
+              raise SystemExit("Packages SHA256 is not covered by the signed InRelease")
+          if int(match.group(2)) != len(packages) or hashlib.sha256(packages).hexdigest() != expected:
+              raise SystemExit("Packages size or SHA256 does not match InRelease")
+          PY
+          python3 - "$apt_root/Packages" "$deb_root" "$HOME/rpmbuild/SOURCES" "$APT_REPO_URL" <<'PY'
+          import hashlib, os, shutil, subprocess, sys
+
+          index_path, destination, source_dir, base_url = sys.argv[1:]
+          wanted = {
+              "piano-device-support": "piano-device-support.deb",
+              "piano-local-firmware": "xiaomi-piano-firmware.deb",
+              "piano-vm-windows": "piano-vm-windows.deb",
+              "gunyahvm": "gunyahvm.deb",
+          }
+          records = {}
+          for stanza in open(index_path).read().strip().split("\n\n"):
+              fields = {}
+              for line in stanza.splitlines():
+                  if line and not line[0].isspace() and ": " in line:
+                      key, value = line.split(": ", 1)
+                      fields[key] = value
+              name = fields.get("Package")
+              if name in wanted and fields.get("Architecture") in {"arm64", "all"}:
+                  if name in records:
+                      raise SystemExit(f"duplicate APT entry for {name}")
+                  records[name] = fields
+          if set(records) != set(wanted):
+              raise SystemExit(f"APT package set mismatch; missing {sorted(set(wanted) - set(records))}")
+          for name in sorted(wanted):
+              entry = records[name]
+              filename = entry["Filename"].removeprefix("./")
+              output = os.path.join(destination, os.path.basename(filename))
+              url = f"{base_url.rstrip('/')}/{filename}"
+              subprocess.run(["curl", "--fail", "--location", "--retry", "3", "--output", output, url], check=True)
+              digest = hashlib.sha256()
+              with open(output, "rb") as deb:
+                  for block in iter(lambda: deb.read(1024 * 1024), b""):
+                      digest.update(block)
+              if digest.hexdigest() != entry["SHA256"]:
+                  raise SystemExit(f"SHA256 mismatch for {name} {entry['Version']}")
+              source_name = wanted[name]
+              shutil.copyfile(output, os.path.join(source_dir, source_name))
+              print(f"Verified {name} {entry['Version']} ({entry['Architecture']}) -> {source_name}")
+          PY
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.5.0-source.tar.zst" \
             "$GUNYAHVM_SOURCE_URL"
-          echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.3.0-source.tar.zst" |
+          echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.5.0-source.tar.zst" |
             sha256sum -c -
           curl --fail --location --retry 3 \
             --output "$HOME/rpmbuild/SOURCES/casilda-1.4.0.tar.xz" \
@@ -212,38 +277,7 @@ jobs:
             "$QUALCOMM_IRIS_SOURCE_URL"
           echo "$QUALCOMM_IRIS_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/qualcomm-iris-vaapi-4125b119.tar.gz" |
             sha256sum -c -
-          unzip -q /tmp/piano-packages.zip -d /tmp/piano-packages
-
-          device_deb=$(find /tmp/piano-packages -type f \
-            -name 'piano-device-support_*.deb' -print -quit)
-          windows_deb=$(find /tmp/piano-packages -type f \
-            -name 'piano-vm-windows_*.deb' -print -quit)
-          test -n "$device_deb"
-          test -n "$windows_deb"
-          deb_root=$(dirname "$device_deb")
-          vm_root=$(dirname "$windows_deb")
-
-          stage_deb() {
-            local rpm_name=$1
-            local stem=$2
-            local search_dir=${3:-$deb_root}
-            local deb work
-            deb=$(find "$search_dir" -maxdepth 1 -name "${stem}_*.deb" -print -quit)
-            test -n "$deb"
-            work=$(mktemp -d)
-            dpkg-deb -x "$deb" "$work/payload"
-            tar --sort=name --mtime='@0' --owner=0 --group=0 --numeric-owner \
-              -czf "$HOME/rpmbuild/SOURCES/${rpm_name}-payload.tar.gz" -C "$work" payload
-            rm -rf "$work"
-          }
-
-          stage_deb piano-device-support piano-device-support
-          stage_deb xiaomi-piano-firmware piano-local-firmware
-          stage_deb piano-vm-windows piano-vm-windows "$vm_root"
-          stage_deb gunyahvm gunyahvm
-          stage_deb piano-npu-firmware piano-npu-firmware
-          stage_deb qcom-npu-runtime qcom-npu-runtime
-          stage_deb qcom-npu-demo-model qcom-npu-demo-model
+          rm -rf "$GITHUB_WORKSPACE/build-work"
 
           install -m0644 piano-sensors/iio-sensor-proxy.service.d/piano.conf \
             "$HOME/rpmbuild/SOURCES/piano-sensors-iio-sensor-proxy.conf"
@@ -293,7 +327,7 @@ jobs:
             "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag-HiFi.conf"
           install -m0644 piano-device-support/audio/50-piano-speaker-upmix.conf \
             "$HOME/rpmbuild/SOURCES/50-piano-speaker-upmix.conf"
-          source_base=https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.5.0
+          source_base=https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1
           curl --fail --location --retry 3 --output \
             "$HOME/rpmbuild/SOURCES/piano-speaker-rotation.service" \
             "$source_base/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service"

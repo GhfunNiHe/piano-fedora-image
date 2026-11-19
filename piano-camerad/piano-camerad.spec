@@ -1,13 +1,13 @@
 %global debug_package %{nil}
 
 Name:           piano-camerad
-Version:        0.1+20261113.1
-Release:        2%{?dist}
+Version:        0.1+20261113.2
+Release:        1%{?dist}
 Summary:        Piano camera capture daemon and WirePlumber integration
 License:        MIT
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        piano-source-v1.5.0.tar.gz
+Source0:        piano-source-v1.6.1.tar.gz
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-numpy v4l-utils procps-ng kmod wireplumber
@@ -74,6 +74,9 @@ install -Dm644 device/camera/source.json \
 %systemd_postun_with_restart piano-camerad.service
 
 %changelog
+* Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261113.2-1
+- Update to the piano-camerad version in the signed upstream APT archive
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261113.1-2
 - Build piano-camerad from the pinned upstream source instead of repacking the Debian payload
 

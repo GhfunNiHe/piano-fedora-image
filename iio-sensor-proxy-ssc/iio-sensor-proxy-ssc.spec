@@ -8,7 +8,7 @@ License:        GPL-3.0-or-later
 URL:            https://gitlab.freedesktop.org/hadess/iio-sensor-proxy
 ExclusiveArch:  aarch64
 Source0:        iio-sensor-proxy-3.9.tar.bz2
-Source1:        piano-source-v1.5.0.tar.gz
+Source1:        piano-source-v1.6.1.tar.gz
 Patch0000:      0003-iio-sensor-proxy-start-preclaimed-coldplug-sensor.patch
 Patch0001:      0004-iio-sensor-proxy-serialize-ssc-accel-polling.patch
 Patch0002:      0005-iio-sensor-proxy-cancel-released-pending-claims.patch
