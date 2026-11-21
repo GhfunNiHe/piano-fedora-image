@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.6.1
-Release:        3.fedorathp%{?dist}
+Release:        4.fedorathp%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -23,6 +23,13 @@ Source10:       piano-touch-source.tar
 Source14:       build-touch.py
 Source15:       pen-button-compat.patch
 Source16:       pen-m80p-position-gap.patch
+# Power profiles and real-time scheduler policy from xiaomipad-8pro-mainline v1.6.2.
+Source17:       piano-balanced.conf
+Source18:       piano-performance.conf
+Source19:       piano-power-saver.conf
+Source20:       piano-ppd.conf
+Source21:       50-piano-profiles.conf
+Source22:       50-piano-uclamp.conf
 Patch0:         pen-docked-bond-recovery.patch
 BuildRequires:  systemd-rpm-macros
 BuildRequires:  dpkg
@@ -31,6 +38,7 @@ BuildRequires:  json-devel systemd-devel pkgconf-pkg-config
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       v4l-utils
 Requires:       pipewire-utils
+Requires:       tuned-ppd
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl
 Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
@@ -128,6 +136,16 @@ install -Dm644 %{SOURCE8} \
     %{buildroot}%{_datadir}/piano/speaker-rotation/config.json
 install -Dm644 %{SOURCE9} \
     %{buildroot}%{_datadir}/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf
+install -Dm644 %{SOURCE17} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-balanced/tuned.conf
+install -Dm644 %{SOURCE18} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-performance/tuned.conf
+install -Dm644 %{SOURCE19} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-power-saver/tuned.conf
+install -Dm644 %{SOURCE20} %{buildroot}%{_sysconfdir}/tuned/piano-ppd.conf
+install -Dm644 %{SOURCE21} \
+    %{buildroot}%{_unitdir}/tuned-ppd.service.d/50-piano-profiles.conf
+install -Dm644 %{SOURCE22} %{buildroot}%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
 cp -a ../touch-source/touch-payload/. %{buildroot}/
 
 # Boot status is optional because the hook packages are separate.
@@ -146,6 +164,11 @@ sed -i \
 %config(noreplace) /etc/piano-network
 %config(noreplace) /etc/dracut.conf.d/90-piano.conf
 %config(noreplace) /etc/dracut.conf.d/91-piano-gunyah.conf
+%config(noreplace) %{_sysconfdir}/tuned/piano-ppd.conf
+%{_prefix}/lib/tuned/profiles/piano-balanced
+%{_prefix}/lib/tuned/profiles/piano-performance
+%{_prefix}/lib/tuned/profiles/piano-power-saver
+%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
 %{_prefix}/lib/dracut/modules.d/99piano
 %{_datadir}/alsa/ucm2/Qualcomm/sm8750
 %{_datadir}/alsa/ucm2/conf.d/sm8750
@@ -220,6 +243,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-4.fedorathp
+- Package the v1.6.2 Piano TuneD profiles and real-time scheduler policy
+- Expose the three Piano profiles through Fedora's tuned-ppd service
+
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-3.fedorathp
 - Renew an invalid bond for the verified docked pen after an authentication failure
 - Reconnect the M80p once if its first Bluetooth HID identity is empty

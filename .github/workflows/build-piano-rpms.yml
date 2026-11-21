@@ -336,6 +336,7 @@ jobs:
           install -m0644 piano-device-support/pen-docked-bond-recovery.patch \
             "$HOME/rpmbuild/SOURCES/pen-docked-bond-recovery.patch"
           install -m0644 piano-device-support/audio/speaker-rotation/* "$HOME/rpmbuild/SOURCES/"
+          install -m0644 piano-device-support/power/*.conf "$HOME/rpmbuild/SOURCES/"
           tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
             -cf "$HOME/rpmbuild/SOURCES/piano-touch-source.tar" \
             -C piano-device-support/touch-source .
