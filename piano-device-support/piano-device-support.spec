@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.6.1
-Release:        6%{?dist}
+Release:        7%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -243,6 +243,12 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-7
+- Stop the per-second kscreen-doctor respawn: poll every 3s, reuse a
+  successful reading, back off on failure and retry after a 300s cooldown
+- Wait for the KDE session bus before polling so the service starts after
+  the user logs in
+
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-6
 - Make speaker rotation follow GNOME Mutter or KDE KScreen, with an
   iio-sensor-proxy orientation fallback for other desktops

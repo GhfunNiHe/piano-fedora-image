@@ -1,6 +1,6 @@
 [Unit]
 Description=Rotate stereo output across the tablet speakers
-After=pipewire.service wireplumber.service
+After=pipewire.service wireplumber.service plasma-workspace.target
 PartOf=graphical-session.target
 
 [Service]

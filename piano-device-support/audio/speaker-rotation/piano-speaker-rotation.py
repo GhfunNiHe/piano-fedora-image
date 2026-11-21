@@ -16,6 +16,7 @@ import json
 import shutil
 import subprocess
 import sys
+import time
 
 import gi
 
@@ -41,7 +42,10 @@ SENSOR_ORIENTATION_TO_TRANSFORM = {
     "bottom-up": 2,
     "right-up": 3,
 }
-POLL_INTERVAL_MS = 1000
+POLL_INTERVAL_MS = 3000
+KSCREEN_COOLDOWN_SECONDS = 300
+SESSION_WAIT_SECONDS = 30
+KDE_SESSION_BUS_NAMES = ("org.kde.KWin", "org.kde.plasmashell")
 
 
 def name_has_owner(connection, name):
@@ -60,6 +64,15 @@ def name_has_owner(connection, name):
         return result.unpack()[0]
     except GLib.Error:
         return False
+
+
+def wait_for_session(connection, names, timeout_seconds):
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        if any(name_has_owner(connection, name) for name in names):
+            return True
+        time.sleep(1)
+    return False
 
 
 class MutterBackend:
@@ -107,24 +120,72 @@ class MutterBackend:
         )
 
 
+class BackendUnavailable(RuntimeError):
+    """Raised when a backend failed repeatedly and should not be polled again."""
+
+
 class KScreenBackend:
     """Screen transform on KDE Plasma, read from libkscreen's CLI."""
 
+    MIN_RETRY_SECONDS = 2.0
+    MAX_RETRY_SECONDS = 60.0
+    MAX_FAILURES = 3
+    TIMEOUT_SECONDS = 2
+
     def __init__(self):
         self.command = shutil.which("kscreen-doctor")
+        self.cached = None
+        self.failures = 0
+        self.retry_seconds = 0.0
+        self.retry_after = 0.0
 
     def current(self):
-        result = subprocess.run(
-            [self.command, "-j"],
-            check=True,
-            text=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=5,
-        )
+        now = time.monotonic()
+        if now < self.retry_after:
+            if self.cached is not None:
+                return self.cached
+            raise RuntimeError("KScreen is waiting to retry")
+        try:
+            result = subprocess.run(
+                [self.command, "-j"],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=self.TIMEOUT_SECONDS,
+            )
+            transform = self.parse(result.stdout)
+        except (
+            subprocess.SubprocessError,
+            OSError,
+            RuntimeError,
+            ValueError,
+            KeyError,
+        ) as exc:
+            self.failures += 1
+            self.retry_seconds = min(
+                max(self.retry_seconds * 2, self.MIN_RETRY_SECONDS),
+                self.MAX_RETRY_SECONDS,
+            )
+            self.retry_after = now + self.retry_seconds
+            if self.failures >= self.MAX_FAILURES:
+                raise BackendUnavailable(
+                    f"kscreen-doctor failed {self.failures} times: {exc}"
+                ) from exc
+            if self.cached is not None:
+                return self.cached
+            raise
+        self.failures = 0
+        self.retry_seconds = 0.0
+        self.retry_after = now + self.MIN_RETRY_SECONDS
+        self.cached = transform
+        return transform
+
+    @staticmethod
+    def parse(payload):
         outputs = [
             output
-            for output in json.loads(result.stdout).get("outputs", [])
+            for output in json.loads(payload).get("outputs", [])
             if output.get("connected") and output.get("enabled")
         ]
         if not outputs:
@@ -220,11 +281,13 @@ def select_backend():
 
 
 class SpeakerRotation:
-    def __init__(self, config, backend):
+    def __init__(self, config, backend, backend_name):
         self.config = config
         self.backend = backend
+        self.backend_name = backend_name
         self.last_transform = None
         self.last_node = None
+        self.cooldown_until = 0.0
         # Reapply after PipeWire recreates filter nodes (including suspend).
         self.pw = Gio.Subprocess.new(
             ["pw-dump", "--monitor"], Gio.SubprocessFlags.STDOUT_PIPE
@@ -248,12 +311,14 @@ class SpeakerRotation:
                 and value.strip().rstrip(b",")
                 == json.dumps(self.config["control_node"]).encode()
             ):
-                self.update()
+                self.reapply()
             self.watch_pipewire()
         except GLib.Error:
             pass
 
-    def set_matrix(self, transform):
+    def set_matrix(self, transform, force=False):
+        if not force and transform == self.last_transform:
+            return
         route = tuple(self.config["routes"][str(transform * 90)])
         params = []
         names = self.config["mixer_nodes"]
@@ -276,7 +341,8 @@ class SpeakerRotation:
         node_id = node["id"]
         # Global IDs can be reused in the same server after a node is removed.
         identity = (node_id, node["info"]["props"]["object.serial"])
-        if self.last_node == identity and self.last_transform == transform:
+        if not force and self.last_node == identity:
+            self.last_transform = transform
             return
         subprocess.run(
             [
@@ -295,9 +361,46 @@ class SpeakerRotation:
         self.last_transform = transform
         self.last_node = identity
 
+    def reapply(self):
+        if self.last_transform is not None:
+            self.set_matrix(self.last_transform, force=True)
+
+    def fallback_backend(self):
+        if self.backend_name == "iio-sensor-proxy":
+            return None
+        try:
+            system = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+            if name_has_owner(system, SENSOR_BUS):
+                return SensorBackend(system), "iio-sensor-proxy"
+        except GLib.Error:
+            pass
+        return None
+
     def update(self):
+        now = time.monotonic()
+        if self.cooldown_until:
+            if now < self.cooldown_until:
+                return True
+            self.cooldown_until = 0.0
+            self.backend = KScreenBackend()
+            self.backend_name = "KDE KScreen"
+            print("speaker-rotation: retrying KScreen after cooldown", flush=True)
         try:
             self.set_matrix(self.backend.current())
+        except BackendUnavailable as exc:
+            print(f"speaker-rotation: {exc}", file=sys.stderr, flush=True)
+            replacement = self.fallback_backend()
+            if replacement is not None:
+                self.backend, self.backend_name = replacement
+                self.backend.subscribe(self.update)
+                print(f"speaker-rotation: using {self.backend_name}", flush=True)
+            else:
+                self.cooldown_until = now + KSCREEN_COOLDOWN_SECONDS
+                print(
+                    f"speaker-rotation: no fallback, retrying in {KSCREEN_COOLDOWN_SECONDS}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
         except (
             GLib.Error,
             RuntimeError,
@@ -317,7 +420,15 @@ def main():
     with open(sys.argv[1], encoding="utf-8") as stream:
         config = json.load(stream)
     backend, name = select_backend()
-    service = SpeakerRotation(config, backend)
+    if name == "KDE KScreen":
+        session = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+        if not wait_for_session(session, KDE_SESSION_BUS_NAMES, SESSION_WAIT_SECONDS):
+            print(
+                f"speaker-rotation: KDE session not ready after {SESSION_WAIT_SECONDS}s",
+                file=sys.stderr,
+                flush=True,
+            )
+    service = SpeakerRotation(config, backend, name)
     print(f"speaker-rotation: using {name}", flush=True)
     service.update()
     GLib.MainLoop().run()
