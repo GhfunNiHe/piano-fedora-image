@@ -25,6 +25,8 @@ env:
   APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
   GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.0/gunyahvm-1.5.0-source.tar.zst
   GUNYAHVM_SOURCE_SHA256: 2e2a06ce30f5897b2c44e3220472fa4308fd59fe5f4794d21fed4c1be82e3669
+  GUNYAHVM_LIBJPEG_TURBO8_URL: https://ports.ubuntu.com/ubuntu-ports/pool/main/libj/libjpeg-turbo/libjpeg-turbo8_2.1.5-4ubuntu4_arm64.deb
+  GUNYAHVM_LIBJPEG_TURBO8_SHA256: cd6cac6155d81d8d2e4a53693a7c91b42b26d1e84d018792d319c24cddaaf9d8
   CASILDA_SOURCE_URL: https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz
   CASILDA_SOURCE_SHA256: 63d85aa795f27ee5e5404ec7d8f6d955874f131bbff6ff9e6efe904d415a362c
   HEXAGONRPC_SOURCE_URL: https://github.com/linux-msm/hexagonrpc/archive/598b591ae9da6a6cfe2ca5ea78998019ca6395ea.tar.gz
@@ -261,6 +263,11 @@ jobs:
             --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.5.0-source.tar.zst" \
             "$GUNYAHVM_SOURCE_URL"
           echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.5.0-source.tar.zst" |
+            sha256sum -c -
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/libjpeg-turbo8_2.1.5-4ubuntu4_arm64.deb" \
+            "$GUNYAHVM_LIBJPEG_TURBO8_URL"
+          echo "$GUNYAHVM_LIBJPEG_TURBO8_SHA256  $HOME/rpmbuild/SOURCES/libjpeg-turbo8_2.1.5-4ubuntu4_arm64.deb" |
             sha256sum -c -
           curl --fail --location --retry 3 \
             --output "$HOME/rpmbuild/SOURCES/casilda-1.4.0.tar.xz" \
