@@ -1,9 +1,10 @@
 %global debug_package %{nil}
+%global __strip /bin/true
 %global _firmwaredir %{_prefix}/lib/firmware
 
 Name:           xiaomi-piano-firmware
 Version:        0.7+os3.0.303.0
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Firmware for Xiaomi Pad 8 Pro (piano)
 License:        LicenseRef-Proprietary-Firmware
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -45,6 +46,9 @@ install -Dm644 usr/share/doc/piano-local-firmware/inputs.json \
 %{_firmwaredir}/qcom
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.7+os3.0.303.0-2
+- Disable brp-strip so the ath12k board file keeps the checksum locked by the deb
+
 * Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.7+os3.0.303.0-1
 - Include the CDSP compute images and their split segments
 
