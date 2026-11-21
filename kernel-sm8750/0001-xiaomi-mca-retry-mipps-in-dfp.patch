@@ -1,8 +1,12 @@
+Subject: power: supply: Xiaomi MCA: retry MiPPS discovery in DFP
+
+Source-commit: 658c139dd9f3f51acd019545febb65f7a7956be2
+
 diff --git a/drivers/power/supply/xiaomi_mca.c b/drivers/power/supply/xiaomi_mca.c
-index c0f6b6526602..6ecb6580c48b 100644
+index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a0319521afa7 100644
 --- a/drivers/power/supply/xiaomi_mca.c
 +++ b/drivers/power/supply/xiaomi_mca.c
-@@ -44,6 +44,7 @@
+@@ -47,6 +47,7 @@
  #include <linux/spinlock.h>
  #include <linux/unaligned.h>
  #include <linux/units.h>
@@ -10,7 +14,7 @@ index c0f6b6526602..6ecb6580c48b 100644
  #include <linux/workqueue.h>
  #include <crypto/sha2.h>
  
-@@ -182,6 +183,7 @@
+@@ -219,6 +220,7 @@ struct xiaomi_mca_pdo {
  #define MCA_VDM_LEN		16
  #define MCA_DATA_ROLE_UFP	1
  #define MCA_DATA_ROLE_DFP	2
@@ -18,7 +22,7 @@ index c0f6b6526602..6ecb6580c48b 100644
  
  /*
   * Charger types as named by the stock sysfs "real_type" table; 13 and 16
-@@ -632,6 +634,7 @@
+@@ -691,6 +693,7 @@ struct xiaomi_mca {
  	u32 pen_generation, pen_attempt_generation;
  	bool pen_attempted;
  	bool piano_otg;
@@ -26,7 +30,15 @@ index c0f6b6526602..6ecb6580c48b 100644
  	bool config_attempted;
  	u32 config_generation;
  	int config_result;
-@@ -1067,6 +1070,9 @@
+@@ -796,6 +799,7 @@ struct xiaomi_mca {
+ 	struct notifier_block psy_nb;
+ 	bool auth_cleanup;	/* verify_process clear still needs confirmation */
+ 	bool mipps_attempted;	/* throttle repeated exchanges on the current cable */
++	bool mipps_dfp_attempted;
+ 	u32 service_generation;
+ 	u32 policy_generation;
+ 	bool policy_active;
+@@ -1256,6 +1260,9 @@ static bool xiaomi_mca_write_allowed(u32 prop, const void *data, size_t len)
  	case MCA_PROP_PPS_SELECT:
  		return hv_charge && len == sizeof(u32) &&
  		       xiaomi_mca_pps_word_ok(val);
@@ -36,7 +48,7 @@ index c0f6b6526602..6ecb6580c48b 100644
  	case MCA_PROP_VDM_VERSION:
  	case MCA_PROP_VDM_VOLTAGE:
  	case MCA_PROP_VDM_TEMP:
-@@ -1301,6 +1307,73 @@
+@@ -1630,6 +1637,77 @@ static int xiaomi_mca_vdm(struct xiaomi_mca *mca, unsigned int generation,
  	return -ETIMEDOUT;
  }
  
@@ -61,6 +73,8 @@ index c0f6b6526602..6ecb6580c48b 100644
 +	unsigned long deadline;
 +	int ret;
 +
++	if (!xiaomi_mca_auth_current(mca, generation))
++		return -ENODEV;
 +	ret = xiaomi_mca_write_u32(mca, MCA_PROP_DATA_ROLE, role);
 +	if (ret)
 +		return ret;
@@ -70,6 +84,8 @@ index c0f6b6526602..6ecb6580c48b 100644
 +		if (!xiaomi_mca_auth_current(mca, generation))
 +			return -ENODEV;
 +		if (xiaomi_mca_read_u32(mca, MCA_PROP_DATA_ROLE) == role) {
++			if (!xiaomi_mca_auth_current(mca, generation))
++				return -ENODEV;
 +			xiaomi_mca_sync_usb_role(mca, usb_role);
 +			return 0;
 +		}
@@ -110,7 +126,7 @@ index c0f6b6526602..6ecb6580c48b 100644
  static bool xiaomi_mca_mipps_digest(struct xiaomi_mca *mca,
  				  const struct piano_mipps_key *key,
  				  u8 message[20], const u8 response[MCA_VDM_LEN],
-@@ -1353,7 +1426,7 @@
+@@ -1682,7 +1760,7 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	unsigned int generation = READ_ONCE(mca->service_generation);
  	u32 attachment = READ_ONCE(mca->attach_generation);
  	u32 adapter_id;
@@ -118,18 +134,19 @@ index c0f6b6526602..6ecb6580c48b 100644
 +	bool discovered = false, capable = false, tried_dfp = false;
  	int i, ret;
  
- 	if (!mipps_auth || mca->mipps_attempted || xiaomi_mca_authenticated(mca) ||
-@@ -1377,8 +1450,17 @@
+ 	if (!mipps_auth || mca->auth_lost || mca->mipps_attempted || xiaomi_mca_authenticated(mca) ||
+@@ -1707,8 +1785,18 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	if (ret)
  		goto finish;
  
 -	/* A Xiaomi VDM query works as UFP too. Never swap PC/hub data roles. */
-+	/* Try UFP first; only Xiaomi sources with a failed query get DFP retry. */
++	/* Try UFP first. Policy retries must not repeat a DFP swap. */
  	ret = xiaomi_mca_vdm(mca, generation, 1, NULL, 0);
-+	if (ret == -ETIMEDOUT &&
++	if (ret == -ETIMEDOUT && !mca->mipps_dfp_attempted &&
 +	    xiaomi_mca_read_u32(mca, MCA_PROP_DATA_ROLE) == MCA_DATA_ROLE_UFP) {
 +		dev_info(mca->dev,
 +			 "MiPPS VDM query timed out as UFP; retrying as DFP\n");
++		mca->mipps_dfp_attempted = true;
 +		tried_dfp = true;
 +		ret = xiaomi_mca_mipps_retry_dfp(mca, generation);
 +		if (!ret)
@@ -138,16 +155,16 @@ index c0f6b6526602..6ecb6580c48b 100644
  	if (ret)
  		goto finish;
  	ret = xiaomi_mca_read_blob(mca, MCA_PROP_VDM_VERSION, &version, sizeof(version));
-@@ -1438,6 +1520,8 @@
- 	}
- finish:
- 	if (generation == READ_ONCE(mca->service_generation)) {
+@@ -1771,6 +1859,8 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+ 			if (xiaomi_mca_auth_current(mca, generation))
+ 				xiaomi_mca_vdm(mca, generation, 7, NULL, 0);
+ 		}
 +		if (ret && tried_dfp)
 +			xiaomi_mca_set_role(mca, generation, MCA_DATA_ROLE_UFP);
- 		if (ret && discovered) {
- 			xiaomi_mca_write_u32(mca, MCA_PROP_PD_VERIFIED, 0);
- 			if (xiaomi_mca_auth_current(mca, generation))
-@@ -3152,6 +3236,8 @@
+ 		/* An unconfirmed clear blocks voltage negotiation until it succeeds. */
+ 		mca->auth_cleanup = true;
+ 		xiaomi_mca_clear_auth(mca);
+@@ -5194,6 +5284,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
  			mca->otg_active = true;
  			ret = xiaomi_mca_otg_cp(mca, record.data[0] ?
  					SC8541_OTG_REVERSE_ON : SC8541_OTG_REVERSE_OFF);
@@ -156,7 +173,7 @@ index c0f6b6526602..6ecb6580c48b 100644
  			if (!ret && !record.data[0])
  				mca->otg_active = false;
  			break;
-@@ -3163,6 +3249,8 @@
+@@ -5209,6 +5301,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
  			 */
  			ret = xiaomi_mca_read_blob(mca, MCA_PROP_OTG_PLUGIN,
  						  &plugin, sizeof(plugin));
@@ -165,17 +182,25 @@ index c0f6b6526602..6ecb6580c48b 100644
  			if (!ret && !plugin)
  				ret = xiaomi_mca_otg_cp(mca, SC8541_OTG_DETACH);
  			break;
-@@ -3278,6 +3366,7 @@
+@@ -5342,6 +5436,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca, u32 *sampled_type)
  	if (attachment != mca->policy_attach_generation) {
  		if (xiaomi_mca_cp_stop(mca, "physical disconnect"))
  			return;
 +		xiaomi_mca_sync_usb_role(mca, USB_ROLE_DEVICE);
+ 		mca->ffc_active = false;
+ 		mca->ffc_done = false;
+ 		mca->charging_done = false;
+@@ -5349,6 +5444,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca, u32 *sampled_type)
+ 		mca->term_count = 0;
  		mca->auth_ok = false;
  		mca->mipps_attempted = false;
++		mca->mipps_dfp_attempted = false;
  		mca->cp = MCA_CP_OFF;
-@@ -4284,6 +4373,37 @@
- 	return 0;
- }
+ 		mca->hv = MCA_HV_OFF;
+ 		mca->aicl_cap_ma = 0;
+@@ -6745,6 +6841,37 @@ static const struct file_operations xiaomi_mca_experiment_fops = {
+ };
+ #endif
  
 +static void xiaomi_mca_usb_role_switch_put(void *data)
 +{
@@ -211,26 +236,26 @@ index c0f6b6526602..6ecb6580c48b 100644
  static int xiaomi_mca_probe(struct auxiliary_device *adev,
  			    const struct auxiliary_device_id *id)
  {
-@@ -4300,6 +4420,9 @@
+@@ -6766,6 +6893,9 @@ static int xiaomi_mca_probe(struct auxiliary_device *adev,
+ 
  	mca->charge_end = 100;
- 	mca->piano_otg = of_device_is_compatible(dev->of_node, "xiaomi,piano-pmic-glink");
  	dev_set_drvdata(dev, mca);
 +	ret = xiaomi_mca_get_usb_role_switch(mca);
 +	if (ret)
 +		return ret;
  	init_completion(&mca->ack);
  	spin_lock_init(&mca->rx_lock);
- 	ret = devm_mutex_init(dev, &mca->lock);
+ 	ret = devm_mutex_init(dev, &mca->transfer_lock);
 diff --git a/drivers/power/supply/xiaomi_mca_test.c b/drivers/power/supply/xiaomi_mca_test.c
-index 0466fa4c8b4f..042fe2988f51 100644
+index 9c00e154b2ce085dddabfe10515d8b0a2d73be44..1e6d773b9d667ae0ed933c6d1b75d0a0e8ec466a 100644
 --- a/drivers/power/supply/xiaomi_mca_test.c
 +++ b/drivers/power/supply/xiaomi_mca_test.c
-@@ -499,11 +499,13 @@
+@@ -502,11 +502,13 @@ struct mca_policy_fixture {
  	struct xiaomi_mca_pdo pdos[MCA_PD_MAX_PDOS];
  	u32 type, vbus, icl, fcc, tbat, verify, verified, svid;
  	u32 pd_state, vdm_state, adapter_id, actual_id, vdm_version;
 +	u32 data_role;
- 	int ucsi_online, ucsi_type, ucsi_status;
+ 	int ucsi_online, ucsi_type, ucsi_status, ucsi_charge_type;
  	__le32 auth_response[4];
  	u32 vdm_order[16], vdm_count, seed_index;
  	bool simulate_auth, bad_digest, fail_verify, fail_clear;
@@ -239,7 +264,7 @@ index 0466fa4c8b4f..042fe2988f51 100644
  	u32 last_prop;
  	u8 last_data[MCA_VDM_LEN];
  	unsigned int writes;
-@@ -584,6 +586,15 @@
+@@ -636,6 +638,15 @@ static int mca_policy_xfer(struct xiaomi_mca *mca, u32 op, u32 prop,
  		}
  		if (prop == MCA_PROP_PD_VERIFIED)
  			f->verified = get_unaligned_le32(data);
@@ -255,7 +280,7 @@ index 0466fa4c8b4f..042fe2988f51 100644
  		if (f->simulate_auth && prop >= MCA_PROP_VDM_BASE &&
  		    prop <= MCA_PROP_VDM_REVERSE) {
  			u8 bytes[MCA_VDM_LEN];
-@@ -692,6 +703,9 @@
+@@ -769,6 +780,9 @@ static int mca_policy_xfer(struct xiaomi_mca *mca, u32 op, u32 prop,
  	case MCA_PROP_VDM_VERSION:
  		value = f->vdm_version;
  		break;
@@ -265,9 +290,15 @@ index 0466fa4c8b4f..042fe2988f51 100644
  	case MCA_PROP_UVDM_STATE:
  		value = f->vdm_state;
  		break;
-@@ -740,0 +755 @@
+@@ -827,6 +841,7 @@ static struct mca_policy_fixture *mca_policy_fixture(struct kunit *test)
+ 	f->fcc = 500;
+ 	f->tbat = 25;
+ 	f->mca.real_type = f->type;
 +	f->data_role = MCA_DATA_ROLE_UFP;
-@@ -862,6 +877,12 @@
+ 	f->mca.vbus_uv = f->vbus;
+ 	f->mca.cp_ma = 6000;
+ 	kunit_activate_static_stub(test, xiaomi_mca_transfer_data, mca_policy_xfer);
+@@ -1077,6 +1092,12 @@ static void xiaomi_mca_test_auth_read_only(struct kunit *test)
  	KUNIT_EXPECT_EQ(test, dev_attr_data_role.attr.mode, 0444);
  	KUNIT_EXPECT_FALSE(test, xiaomi_mca_write_allowed(MCA_PROP_DATA_ROLE, &val, 4));
  	KUNIT_EXPECT_FALSE(test, xiaomi_mca_write_allowed(MCA_PROP_VDM_REVERSE, &val, 4));
@@ -280,7 +311,7 @@ index 0466fa4c8b4f..042fe2988f51 100644
  }
  
  static void xiaomi_mca_test_temperature_follow(struct kunit *test)
-@@ -2468,6 +2489,20 @@
+@@ -3404,6 +3425,41 @@ static void xiaomi_mca_test_mipps_exchange(struct kunit *test)
  	KUNIT_EXPECT_EQ(test, f->mca.policy_attach_generation, f->mca.attach_generation);
  }
  
@@ -298,14 +329,36 @@ index 0466fa4c8b4f..042fe2988f51 100644
 +	KUNIT_EXPECT_EQ(test, f->vdm_count, 7);
 +}
 +
++static void xiaomi_mca_test_mipps_dfp_failure_once(struct kunit *test)
++{
++	struct mca_policy_fixture *f = mca_auth_fixture(test);
++
++	f->fail_ufp_vdm = true;
++	f->vdm_version = 0;
++	guard(mutex)(&f->mca.lock);
++	xiaomi_mca_mipps_authenticate(&f->mca);
++	KUNIT_EXPECT_TRUE(test, f->mca.mipps_dfp_attempted);
++	KUNIT_EXPECT_FALSE(test, xiaomi_mca_authenticated(&f->mca));
++	KUNIT_EXPECT_EQ(test, f->data_role, MCA_DATA_ROLE_UFP);
++	KUNIT_EXPECT_EQ(test, f->verify, 0);
++	KUNIT_EXPECT_EQ(test, f->vdm_count, 1);
++
++	/* The new policy can retry MiPPS without detaching the cable. */
++	f->mca.mipps_attempted = false;
++	xiaomi_mca_mipps_authenticate(&f->mca);
++	KUNIT_EXPECT_EQ(test, f->data_role, MCA_DATA_ROLE_UFP);
++	KUNIT_EXPECT_EQ(test, f->vdm_count, 1);
++}
++
  static void xiaomi_mca_test_mipps_bad_digest(struct kunit *test)
  {
  	struct mca_policy_fixture *f = mca_auth_fixture(test);
-@@ -2710,6 +2745,7 @@
+@@ -5972,6 +6028,8 @@ static struct kunit_case xiaomi_mca_test_cases[] = {
  	KUNIT_CASE(xiaomi_mca_test_source_limits),
  	KUNIT_CASE(xiaomi_mca_test_pd_recovery),
  	KUNIT_CASE(xiaomi_mca_test_mipps_exchange),
 +	KUNIT_CASE(xiaomi_mca_test_mipps_dfp_fallback),
++	KUNIT_CASE(xiaomi_mca_test_mipps_dfp_failure_once),
  	KUNIT_CASE(xiaomi_mca_test_mipps_bad_digest),
  	KUNIT_CASE(xiaomi_mca_test_mipps_lost_ack),
  	KUNIT_CASE(xiaomi_mca_test_mipps_restart),
