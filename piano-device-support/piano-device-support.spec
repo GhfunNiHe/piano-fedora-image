@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.6.1
-Release:        5%{?dist}
+Release:        6%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -243,6 +243,11 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-6
+- Make speaker rotation follow GNOME Mutter or KDE KScreen, with an
+  iio-sensor-proxy orientation fallback for other desktops
+- Correct the KScreen left/right mapping so 90 and 270 degrees are not swapped
+
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-5
 - Replace the old THP reader with the pinned piano-fedora touch and pen input
 - Select hand calibration by LCD ID and bridge brief gaps in M80p position frames
