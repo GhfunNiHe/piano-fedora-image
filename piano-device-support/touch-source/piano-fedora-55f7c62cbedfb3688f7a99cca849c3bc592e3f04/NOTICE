@@ -1,0 +1,68 @@
+# 许可归属
+
+本仓库的许可分两层。
+
+## 本仓库自有内容
+
+`LICENSE` 里的 MIT 许可证覆盖本仓库自己的脚本、测试与文档，包括 `scripts/`、
+`tests/`、`docs/`、`.github/`、`initramfs/` 下的自有文件，以及 `patches/` 下
+补丁的元数据（`series.json`）。
+
+Copyright (c) 2026 phxinyang
+
+## 补丁
+
+`patches/` 下的补丁修改的是上游代码，补丁本身沿用被改文件的上游许可。
+
+| 目录 | 目标 | 许可 |
+| --- | --- | --- |
+| `patches/kernel/` | Linux 内核源码（`drivers/`、`sound/`、`Documentation/`） | GPL-2.0 |
+| `patches/kernel-f2fs/`、`patches/kernel-gunyah/` | SunUEFI 的构建工具与 initramfs 脚本 | 按被改文件的声明 |
+| `patches/kernel-iris/`、`patches/kernel-stability/` | SunUEFI 的 `tools/prepare_release_kernel.py`，并生成内核补丁 | 工具按文件声明，生成的补丁沿用 GPL-2.0 |
+| `patches/packaging-overlays/` | SunUEFI 的 `tools/package_release.py` | 按被改文件的声明 |
+| `patches/uefi-ufs/`、`patches/uefi-live-memory/`、`patches/uefi-live-rm/` | SunUEFI 的 `uefi/core/*.c`、`uefi/handoff/bootselect/BootSelect.ld` | BSD-2-Clause-Patent |
+
+`patches/kernel/` 保留原作者与 `Signed-off-by`，新增代码带
+`SPDX-License-Identifier`。SunUEFI 是文件级许可，被修改的 C 文件与链接脚本
+声明 `BSD-2-Clause-Patent`；完整说明见其仓库的 `LICENSE.md` 与 `THIRD_PARTY.md`。
+
+## 上游组件
+
+上游仓库、锁定 commit 与各自角色见 `sources.lock.json`。各组件按自身许可
+取用，不复制进本仓库。`piano-firmware` 许可不明，只在构建时取用，不入库。
+
+SunUEFI 的来源、文件级许可与第三方材料见
+[Project SunUEFI](https://github.com/slwyts/Project-SunUEFI) 的
+`LICENSE.md`、`THIRD_PARTY.md` 与各文件 SPDX 声明。
+
+## 改编进仓库的上游源码
+
+| 位置 | 来源 | 许可 |
+| --- | --- | --- |
+| `packages/xiaomi-piano-thp/src/src/` 里带 `Adapted from` 或 `Modified from` 头的文件 | [ianchb/xiaomi-sheng-thp](https://github.com/ianchb/xiaomi-sheng-thp) 的触控与笔驱动，按本设备改动后入库 | Apache-2.0 |
+| 同目录下标注 MIT 的自有文件（帧处理、校准、方向、回放） | 本仓库 | MIT |
+
+这些文件头部保留了 SPDX 标识与改编说明。改动清单随补丁与提交历史一起维护。
+
+## 面板校准数据
+
+| 位置 | 来源 | 许可 |
+| --- | --- | --- |
+| `packages/xiaomi-piano-thp/usr/share/piano/touch/piano-{csot,boe}.json` | 从原厂固件 `/odm/firmware/piano_nova_{csot,boe}_thp_config.ini`（ROM `OS3.0.309.0.WPYCNXM`）提取的电极校准数值，`source_sha256` 指回原文件 | 未确认；见下 |
+| `packages/xiaomi-piano-thp/usr/share/piano/pen/calibration/piano-{csot,boe}.ini` | 同一份原厂 INI 里的笔校准数值，只保留数值项 | 未确认；见下 |
+
+这两组文件只包含校准数值本身，不含原厂 INI 的其余配置。原厂 INI 不入库。
+
+再分发许可未取得厂商确认。本项目按“设备所有者从自己持有的固件中提取、用于同一台设备”的场景分发，
+不主张对这些数值的任何权利。拿到同一镜像的人应当自行确认所在司法辖区是否允许。
+如果厂商提出异议，这些文件会从仓库与发布物中移除，`xiaomi-piano-thp` 改为运行时从用户自己的原厂数据生成。
+
+这组数据自提交 `4649de7` 起就在公开仓库与公开 COPR 中，发布 Release 不增加暴露面。
+
+## 厂商固件与校准数据
+
+`xiaomi-piano-firmware` 与 `xiaomi-piano-thp` 中的厂商固件、面板/笔校准数值和
+`p81c-radio.json` 不是开源内容，未授予再分发许可，仅按设备所有者自用的场景分发。
+`xiaomi-piano-firmware` 用 `LicenseRef-Xiaomi-Proprietary` 标记整包。权利方提出
+异议时，这些文件会从仓库与发布物中移除。
+

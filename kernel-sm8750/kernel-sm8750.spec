@@ -4,15 +4,15 @@
 %global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT da4b783e34bd05d7451a6f904fbf567af1215f99
-%global KERNEL_SHORT da4b783
+%global KERNEL_COMMIT 658c139dd9f3f51acd019545febb65f7a7956be2
+%global KERNEL_SHORT 658c139
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        5.piano%{?dist}
+Release:        7.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
@@ -28,6 +28,7 @@ Source5:        ufdt_apply_overlay
 Source6:        prepare-boot-dtb.py
 Source7:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
+Patch0003:      0003-nt36532e-thp-add-fedora-proc-compat.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
 BuildRequires:  gcc hostname kmod lld llvm make openssl-devel perl-interpreter
@@ -44,10 +45,10 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.1 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.2 source commit. It
 starts from the config in the compiled upstream kernel package and applies
-the requested ThinLTO, built-in NTSYNC, built-in F2FS, multipath routing and
-UFS BSG settings. The package assembles the piano boot DTB from the freshly
+the requested ThinLTO, built-in NTSYNC, built-in F2FS and multipath routing
+settings. The package assembles the piano boot DTB from the freshly
 built desktop DTB and the stock Android base DTB/DTBO in stock/, then
 installs it with the v4l2loopback module.
 
@@ -154,6 +155,11 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-7.piano
+- Use the v1.6.2 kernel commit and the published piano104 configuration with uclamp
+- Expose the existing exclusive THP stream and pen scan request to the pinned
+  piano-fedora runtime without changing the existing misc device path
+
 * Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-5.piano
 - Update to kernel commit da4b783 from the v1.6.1 release
 - Replace the base config with the one extracted from its compiled linux-image package

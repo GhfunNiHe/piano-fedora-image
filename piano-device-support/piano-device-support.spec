@@ -2,9 +2,9 @@
 
 Name:           piano-device-support
 Version:        1.6.1
-Release:        1%{?dist}
+Release:        5%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
-License:        MIT AND BSD-3-Clause AND GPL-2.0-only AND Apache-2.0
+License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        piano-device-support.deb
@@ -13,15 +13,32 @@ Source2:        Xiaomi-Pad-8-Pro-HiFi.conf
 Source3:        Piano-Capture-Diag.conf
 Source4:        Piano-Capture-Diag-HiFi.conf
 Source5:        50-piano-speaker-upmix.conf
-Source6:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service#/piano-speaker-rotation.service
-Source7:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/device/audio/speaker-rotation/speaker-rotation.py#/piano-speaker-rotation.py
-Source8:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json#/piano-speaker-rotation-config.json
-Source9:        https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1/packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf#/55-piano-speaker-rotation.conf
+# Speaker rotation files from xiaomipad-8pro-mainline v1.6.1.
+Source6:        piano-speaker-rotation.service
+Source7:        piano-speaker-rotation.py
+Source8:        piano-speaker-rotation-config.json
+Source9:        55-piano-speaker-rotation.conf
+# Staged from this repository's touch-source/ directory for the SRPM.
+Source10:       piano-touch-source.tar
+Source14:       build-touch.py
+Source15:       pen-button-compat.patch
+Source16:       pen-m80p-position-gap.patch
+# Power profiles and real-time scheduler policy from xiaomipad-8pro-mainline v1.6.2.
+Source17:       piano-balanced.conf
+Source18:       piano-performance.conf
+Source19:       piano-power-saver.conf
+Source20:       piano-ppd.conf
+Source21:       50-piano-profiles.conf
+Source22:       50-piano-uclamp.conf
+Patch0:         pen-docked-bond-recovery.patch
 BuildRequires:  systemd-rpm-macros
 BuildRequires:  dpkg
+BuildRequires:  gcc gcc-c++ git-core glibc-static libstdc++-static make patch python3 tar
+BuildRequires:  json-devel systemd-devel pkgconf-pkg-config
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
 Requires:       v4l-utils
 Requires:       pipewire-utils
+Requires:       tuned-ppd
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl
 Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
@@ -29,16 +46,29 @@ Recommends:     openssh-server
 Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 
 %description
-Runtime device support for the Xiaomi Pad 8 Pro: platform services, touch
-and pen support, infrared and charging helpers, power/sleep policy,
-and developer mode. Kernel boot policy is supplied by a separate hook package.
+Runtime device support for the Xiaomi Pad 8 Pro: platform services,
+piano-fedora touch and pen tip input, the upstream pen radio and charging
+helpers, power/sleep policy, and developer mode. Kernel boot policy is
+supplied by a separate hook package.
 
 %prep
 mkdir -p payload
 dpkg-deb -x %{SOURCE0} payload
+patch --batch --forward --fuzz=0 -p1 -d payload -i %{PATCH0}
+mkdir -p touch-source
+cd touch-source
+tar -xf %{SOURCE10}
 
 %build
-:
+cd touch-source
+python3 %{SOURCE14} \
+    --fedora piano-fedora-55f7c62cbedfb3688f7a99cca849c3bc592e3f04 \
+    --sunuefi Project-SunUEFI-f06ad9eeb4d505ffae70c2814b089e381ae72145 \
+    --debian debian-piano-a75f8c5d5fa099d65c171ac839c2e3bb6c63ec45 \
+    --integration xiaomipad-8pro-mainline-d9aa8fb1cf91e45224244726a5d639f45e5538e2 \
+    --pen-button-patch %{SOURCE15} \
+    --pen-position-patch %{SOURCE16} \
+    --output touch-payload
 
 %install
 cd payload
@@ -55,6 +85,16 @@ rm -f %{buildroot}%{_prefix}/sbin/piano-boot-update
 rm -f %{buildroot}%{_prefix}/sbin/piano-boot-switch
 rm -f %{buildroot}%{_prefix}/sbin/piano-slot-success
 rm -f %{buildroot}%{_libexecdir}/piano/piano-emergency-android
+# The selected candidate touch stack owns its input reader.
+rm -f %{buildroot}%{_unitdir}/piano-thp.service
+rm -f %{buildroot}%{_libexecdir}/piano/piano-thp-live
+# Keep the existing misc-node alias and network policy. The target kernel's
+# SPI driver is named nt36532e-thp, so the SunUEFI SPI rule would never match.
+# Activate the new reader from the same node that activated the old reader.
+grep -qF 'ENV{SYSTEMD_WANTS}+="piano-thp.service"' \
+    %{buildroot}%{_udevrulesdir}/71-piano.rules
+sed -i 's/ENV{SYSTEMD_WANTS}+="piano-thp.service"/ENV{SYSTEMD_WANTS}+="piano-touch.service"/' \
+    %{buildroot}%{_udevrulesdir}/71-piano.rules
 rm -rf %{buildroot}%{_prefix}/lib/piano/boot
 rm -f %{buildroot}%{_unitdir}/piano-slot-success.service
 rm -f %{buildroot}%{_unitdir}/piano-emergency-android.service
@@ -96,21 +136,39 @@ install -Dm644 %{SOURCE8} \
     %{buildroot}%{_datadir}/piano/speaker-rotation/config.json
 install -Dm644 %{SOURCE9} \
     %{buildroot}%{_datadir}/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf
+install -Dm644 %{SOURCE17} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-balanced/tuned.conf
+install -Dm644 %{SOURCE18} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-performance/tuned.conf
+install -Dm644 %{SOURCE19} \
+    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-power-saver/tuned.conf
+install -Dm644 %{SOURCE20} %{buildroot}%{_sysconfdir}/tuned/piano-ppd.conf
+install -Dm644 %{SOURCE21} \
+    %{buildroot}%{_unitdir}/tuned-ppd.service.d/50-piano-profiles.conf
+install -Dm644 %{SOURCE22} %{buildroot}%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
+cp -a ../touch-source/touch-payload/. %{buildroot}/
 
 # Boot status is optional because the hook packages are separate.
 sed -i \
     -e "s/, 'piano-emergency-android.service'//" \
     -e "s/'piano-slot-success.service', //" \
+    -e "s/piano-thp.service/piano-touch.service/g" \
     -e "/add('SKIP', 'Boot slot and image sets'/,+2d" \
     %{buildroot}%{_bindir}/piano-check
 
 %files
 %license %{_datadir}/doc/piano-device-support/copyright
+%license %{_datadir}/licenses/piano-device-support/touch-input
 %doc %{_datadir}/doc/piano-device-support/NOTICE
 %config(noreplace) /etc/security/limits.d/90-piano-gunyah.conf
 %config(noreplace) /etc/piano-network
 %config(noreplace) /etc/dracut.conf.d/90-piano.conf
 %config(noreplace) /etc/dracut.conf.d/91-piano-gunyah.conf
+%config(noreplace) %{_sysconfdir}/tuned/piano-ppd.conf
+%{_prefix}/lib/tuned/profiles/piano-balanced
+%{_prefix}/lib/tuned/profiles/piano-performance
+%{_prefix}/lib/tuned/profiles/piano-power-saver
+%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
 %{_prefix}/lib/dracut/modules.d/99piano
 %{_datadir}/alsa/ucm2/Qualcomm/sm8750
 %{_datadir}/alsa/ucm2/conf.d/sm8750
@@ -123,9 +181,9 @@ sed -i \
 %{_prefix}/lib/piano
 %{_prefix}/sbin/piano-devmode
 %{_prefix}/sbin/piano-reboot-bootloader
-%{_unitdir}
+%{_unitdir}/*
 %{_prefix}/lib/systemd/logind.conf.d
-%{_prefix}/lib/systemd/network
+%{_prefix}/lib/systemd/network/*.network
 %{_prefix}/lib/systemd/sleep.conf.d
 %{_prefix}/lib/systemd/system-sleep/tablet-charge-sample
 %{_prefix}/lib/systemd/user/tablet-charge-idle.service
@@ -135,7 +193,7 @@ sed -i \
 %{_prefix}/libexec/tablet-charge-display
 %{_prefix}/libexec/tablet-charge-idle
 %{_prefix}/libexec/tablet-charge-sample
-%{_udevrulesdir}
+%{_udevrulesdir}/*.rules
 %{_sysusersdir}/piano-gunyah.conf
 %{_sysusersdir}/piano-pen.conf
 %{_datadir}/glib-2.0/schemas/95_tablet-charge.gschema.override
@@ -144,17 +202,24 @@ sed -i \
 %{_datadir}/tablet-charge/device
 %{_datadir}/ubuntu/gnome-shell/modes/ubuntu.json
 %{_datadir}/piano/pen
+%{_datadir}/piano/touch
+%{_bindir}/piano-touch-view
+%config(noreplace) %{_sysconfdir}/systemd/system/piano-touch.service.d/20-fast-restart.conf
 %{_datadir}/polkit-1/actions/io.github.piano.devmode.policy
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
 %{_datadir}/polkit-1/actions/org.tablet.charge-behaviour.policy
 
 %post
-%systemd_post piano-debug-timeout.service piano-pen-radio.service tablet-charge-events.service tablet-charge-sample.timer
+%systemd_post piano-debug-timeout.service piano-pen-radio.service piano-touch.service tablet-charge-events.service tablet-charge-sample.timer
 %systemd_user_post piano-speaker-rotation.service
 if command -v systemctl >/dev/null 2>&1; then
     systemctl --global enable piano-speaker-rotation.service >/dev/null 2>&1 || :
     systemctl disable --now piano-debug.service >/dev/null 2>&1 || :
+    systemctl disable --now piano-thp.service >/dev/null 2>&1 || :
     systemctl enable --now tablet-charge-events.service tablet-charge-sample.timer >/dev/null 2>&1 || :
+    if [ -r /proc/nvt_thp_stream ]; then
+        systemctl start piano-touch.service >/dev/null 2>&1 || :
+    fi
 fi
 rm -f /etc/systemd/system/multi-user.target.wants/piano-debug.service
 if command -v udevadm >/dev/null 2>&1; then
@@ -165,18 +230,28 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %preun
-%systemd_preun tablet-charge-events.service tablet-charge-sample.timer
+%systemd_preun piano-touch.service tablet-charge-events.service tablet-charge-sample.timer
 %systemd_user_preun piano-speaker-rotation.service
 if [ "$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
     systemctl --global disable piano-speaker-rotation.service >/dev/null 2>&1 || :
 fi
 
 %postun
+%systemd_postun_with_restart piano-touch.service
 if command -v udevadm >/dev/null 2>&1; then
     udevadm control --reload-rules || :
 fi
 
 %changelog
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-5
+- Replace the old THP reader with the pinned piano-fedora touch and pen input
+- Select hand calibration by LCD ID and bridge brief gaps in M80p position frames
+- Renew an invalid docked pen bond and retry an empty M80p HID identity once
+- Build the touch and speaker helpers from sources carried in the repository
+- Package device files inside the shared systemd and udev directories
+- Package the v1.6.2 Piano TuneD profiles and real-time scheduler policy
+- Expose the three Piano profiles through Fedora's tuned-ppd service
+
 * Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-1
 - Track piano-device-support 1.6.1 from the signed upstream APT archive
 

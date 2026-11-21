@@ -1,0 +1,50 @@
+--- a/linux/userspace/pen/piano-pen-owner.c
++++ b/linux/userspace/pen/piano-pen-owner.c
+@@ -25,6 +25,8 @@
+     struct piano_pen_input_area area;
+     char *hidraw, *ini;
+     int product, m80_buttons;
++    int32_t last_x, last_y;
++    uint64_t last_position;
+     uint64_t retry_at, max_age, last_frame, last_pressure;
+     int hid_fd, notify_fd, input_fd, tool_present, contact_present, have_frame, release_pending;
+     int pressure_started;
+@@ -35,6 +37,7 @@
+ };
+ 
+ #define SQUEEZE_HOLD_NS UINT64_C(600000000)
++#define M80P_POSITION_GAP_NS UINT64_C(25000000)
+ 
+ static uint64_t owner_boot_ns(void)
+ {
+@@ -87,6 +90,7 @@
+     release_tool(p);
+     piano_pen_core_reset(p->core);
+     p->have_frame = 0;
++    p->last_position = 0;
+     p->last_pressure = 0;
+     p->pressure_started = 0;
+     p->squeeze_down = 0;
+@@ -513,6 +517,22 @@
+         return;
+     }
+     int proximity = !!(out.valid & PIANO_PEN_COORDINATES_VALID);
++    if (p->product == 0x4d80) {
++        if (proximity) {
++            p->last_position = out.timestamp_ns;
++            p->last_x = out.x;
++            p->last_y = out.y;
++        } else if (p->tool_present && p->last_position &&
++                   now - p->last_position <= M80P_POSITION_GAP_NS) {
++            /* A brief gap in M80p position frames must not release a stroke.
++             * Keep the last real position; pressure retains its own validity.
++             */
++            proximity = 1;
++            out.valid |= PIANO_PEN_COORDINATES_VALID;
++            out.x = p->last_x;
++            out.y = p->last_y;
++        }
++    }
+     int contact = 0;
+     if ((out.valid & PIANO_PEN_PRESSURE_VALID) &&
+         out.pressure_age_ns <= out.timestamp_ns) {

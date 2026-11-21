@@ -1,0 +1,289 @@
+From: GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com>
+Subject: [PATCH] input: nt36532e-thp: expose the existing stream to Fedora touch runtime
+
+The piano-fedora runtime pinned to SunUEFI f06ad9ee reads NTP1 records
+from procfs, selects pen scanning through a separate control node and reads
+the panel ID before choosing calibration. The existing misc device already
+produces the same NTP1 frame and owns the controller lifecycle. Expose only
+those operations through procfs while preserving the exclusive misc reader,
+firmware startup, pen command and panel handling. The legacy raw write is an
+acknowledgment: opening the proc stream starts capture and closing it stops
+capture, as required by the current driver.
+
+The proc nodes are optional. Registration failure leaves the existing misc
+stream and pen path available.
+
+Source-commit: 658c139dd9f3f51acd019545febb65f7a7956be2
+---
+diff --git a/drivers/input/touchscreen/nt36532e-thp/core.c b/drivers/input/touchscreen/nt36532e-thp/core.c
+--- a/drivers/input/touchscreen/nt36532e-thp/core.c
++++ b/drivers/input/touchscreen/nt36532e-thp/core.c
+@@ -12,17 +12,20 @@
+ #include <linux/interrupt.h>
+ #include <linux/kfifo.h>
+ #include <linux/kref.h>
++#include <linux/kstrtox.h>
+ #include <linux/ktime.h>
+ #include <linux/miscdevice.h>
+ #include <linux/module.h>
+ #include <linux/mutex.h>
+ #include <linux/of.h>
+ #include <linux/poll.h>
++#include <linux/proc_fs.h>
+ #include <linux/pm.h>
+ #include <linux/power_supply.h>
+ #include <linux/property.h>
+ #include <linux/regmap.h>
+ #include <linux/slab.h>
++#include <linux/seq_file.h>
+ #include <linux/sizes.h>
+ #include <linux/spi/spi.h>
+ #include <linux/unaligned.h>
+@@ -64,6 +67,7 @@
+ 	struct spi_device *spi;
+ 	struct regmap *map;
+ 	struct miscdevice misc;
++	struct proc_dir_entry *proc_stream, *proc_raw, *proc_stylus, *proc_status;
+ 	struct drm_panel_follower follower;
+ 	struct kref ref;
+ 	/* API transitions serialize across cancellation; the worker never takes this. */
+@@ -98,7 +102,7 @@
+ 	unsigned long flags;
+ 	unsigned int read_errors;
+ 	int error;
+-	bool dead, opened, running, epoch, suspended, panel_off;
++	bool dead, opened, proc_reader, running, epoch, suspended, panel_off;
+ };
+ 
+ static_assert(sizeof(struct nvt_stream_header) == 32);
+@@ -658,9 +662,9 @@
+ 	.panel_unpreparing = nvt_panel_disabling,
+ };
+ 
+-static int nvt_open(struct inode *inode, struct file *file)
+-{
+-	struct nvt_thp *nvt = container_of(file->private_data, struct nvt_thp, misc);
++static int nvt_open_owner(struct inode *inode, struct file *file,
++			  struct nvt_thp *nvt, bool proc_reader)
++{
+ 	int ret;
+ 
+ 	if (file->f_mode & FMODE_WRITE)
+@@ -677,6 +681,11 @@
+ 		ret = -EBUSY;
+ 		goto unlock;
+ 	}
++	/* A proc stylus request may precede opening the stream. The misc reader
++	 * remains independent of that request and selects its model by ioctl.
++	 */
++	if (!proc_reader)
++		nvt->pen_model = 0;
+ 	kfifo_reset(&nvt->fifo);
+ 	WRITE_ONCE(nvt->error, 0);
+ 	/* udev may open the stream before the panel has been enabled. */
+@@ -689,6 +698,7 @@
+ 		}
+ 	}
+ 	WRITE_ONCE(nvt->opened, true);
++	nvt->proc_reader = proc_reader;
+ 	kref_get(&nvt->ref);
+ 	file->private_data = nvt;
+ 	stream_open(inode, file);
+@@ -698,6 +708,13 @@
+ 	return ret;
+ }
+ 
++static int nvt_open(struct inode *inode, struct file *file)
++{
++	struct nvt_thp *nvt = container_of(file->private_data, struct nvt_thp, misc);
++
++	return nvt_open_owner(inode, file, nvt, false);
++}
++
+ static int nvt_release(struct inode *inode, struct file *file)
+ {
+ 	struct nvt_thp *nvt = file->private_data;
+@@ -708,6 +725,7 @@
+ 		nvt_quiesce(nvt);
+ 	mutex_lock(&nvt->lifecycle_lock);
+ 	nvt->pen_model = 0;
++	nvt->proc_reader = false;
+ 	nvt->state_events = false;
+ 	clear_bit(NVT_STATE_CHANGED, &nvt->flags);
+ 	mutex_unlock(&nvt->lifecycle_lock);
+@@ -820,6 +838,154 @@
+ 	.compat_ioctl = compat_ptr_ioctl,
+ };
+ 
++/* The Fedora touch reader expects the older proc path. The stream records
++ * already have the same NTP1 framing; both paths share the exclusive reader
++ * and the same FIFO. Opening the proc stream starts capture, so the legacy
++ * raw enable/disable writes only acknowledge that reader's lifecycle.
++ */
++static int nvt_proc_stream_open(struct inode *inode, struct file *file)
++{
++	struct nvt_thp *nvt = pde_data(inode);
++
++	return nvt_open_owner(inode, file, nvt, true);
++}
++
++static ssize_t nvt_proc_raw_write(struct file *file, const char __user *buf,
++				  size_t count, loff_t *ppos)
++{
++	struct nvt_thp *nvt = pde_data(file_inode(file));
++	bool enable;
++	int ret;
++
++	ret = kstrtobool_from_user(buf, count, &enable);
++	if (ret)
++		return ret;
++	guard(mutex)(&nvt->lifecycle_lock);
++	if (nvt->dead)
++		return -ENODEV;
++	if (!nvt->opened || !nvt->proc_reader)
++		return -EBUSY;
++	return count;
++}
++
++static ssize_t nvt_proc_stylus_write(struct file *file, const char __user *buf,
++				     size_t count, loff_t *ppos)
++{
++	struct nvt_thp *nvt = pde_data(file_inode(file));
++	unsigned int model;
++	int ret;
++
++	ret = kstrtouint_from_user(buf, count, 0, &model);
++	if (ret)
++		return ret;
++	if (model > 3)
++		return -EINVAL;
++	ret = mutex_lock_interruptible(&nvt->transition_lock);
++	if (ret)
++		return ret;
++	mutex_lock(&nvt->lifecycle_lock);
++	if (nvt->dead)
++		ret = -ENODEV;
++	else if (nvt->opened && !nvt->proc_reader)
++		ret = -EBUSY;
++	else {
++		nvt->pen_model = model;
++		ret = nvt_apply_pen(nvt);
++	}
++	mutex_unlock(&nvt->lifecycle_lock);
++	mutex_unlock(&nvt->transition_lock);
++	return ret ? ret : count;
++}
++
++static int nvt_proc_status_show(struct seq_file *seq, void *unused)
++{
++	struct nvt_thp *nvt = seq->private;
++
++	guard(mutex)(&nvt->lifecycle_lock);
++	if (nvt->dead)
++		return -ENODEV;
++	seq_printf(seq, "lcd_id: %d\n", nvt->lcd_id);
++	seq_printf(seq, "stylus_mode: %u\n", nvt->pen_model);
++	seq_printf(seq, "enabled: %u\n", nvt->opened && nvt->proc_reader);
++	return 0;
++}
++
++static int nvt_proc_status_open(struct inode *inode, struct file *file)
++{
++	struct nvt_thp *nvt = pde_data(inode);
++	int ret;
++
++	guard(mutex)(&nvt->lifecycle_lock);
++	if (nvt->dead)
++		return -ENODEV;
++	kref_get(&nvt->ref);
++	ret = single_open(file, nvt_proc_status_show, nvt);
++	if (ret)
++		nvt_put(nvt);
++	return ret;
++}
++
++static int nvt_proc_status_release(struct inode *inode, struct file *file)
++{
++	struct nvt_thp *nvt = ((struct seq_file *)file->private_data)->private;
++	int ret = single_release(inode, file);
++
++	nvt_put(nvt);
++	return ret;
++}
++
++static const struct proc_ops nvt_proc_stream_ops = {
++	.proc_open = nvt_proc_stream_open,
++	.proc_read = nvt_read,
++	.proc_poll = nvt_poll,
++	.proc_release = nvt_release,
++	.proc_lseek = noop_llseek,
++};
++
++static const struct proc_ops nvt_proc_raw_ops = {
++	.proc_write = nvt_proc_raw_write,
++	.proc_lseek = noop_llseek,
++};
++
++static const struct proc_ops nvt_proc_stylus_ops = {
++	.proc_write = nvt_proc_stylus_write,
++	.proc_lseek = noop_llseek,
++};
++
++static const struct proc_ops nvt_proc_status_ops = {
++	.proc_open = nvt_proc_status_open,
++	.proc_read = seq_read,
++	.proc_lseek = seq_lseek,
++	.proc_release = nvt_proc_status_release,
++};
++
++static void nvt_proc_remove(struct nvt_thp *nvt)
++{
++	proc_remove(nvt->proc_status);
++	proc_remove(nvt->proc_stylus);
++	proc_remove(nvt->proc_raw);
++	proc_remove(nvt->proc_stream);
++}
++
++static void nvt_proc_register(struct nvt_thp *nvt)
++{
++	nvt->proc_stream = proc_create_data("nvt_thp_stream", 0400, NULL,
++					    &nvt_proc_stream_ops, nvt);
++	nvt->proc_raw = proc_create_data("nvt_thp_raw", 0200, NULL,
++					 &nvt_proc_raw_ops, nvt);
++	nvt->proc_stylus = proc_create_data("nvt_thp_stylus", 0200, NULL,
++					    &nvt_proc_stylus_ops, nvt);
++	nvt->proc_status = proc_create_data("nvt_thp_status", 0400, NULL,
++					    &nvt_proc_status_ops, nvt);
++	if (!nvt->proc_stream || !nvt->proc_raw || !nvt->proc_stylus ||
++	    !nvt->proc_status) {
++		nvt_proc_remove(nvt);
++		nvt->proc_stream = nvt->proc_raw = nvt->proc_stylus =
++			nvt->proc_status = NULL;
++		dev_warn(&nvt->spi->dev, "THP proc compatibility unavailable\n");
++	}
++}
++
+ /* Stock p81 lcd_id levels: 0 is the CSOT panel module, 1 the BOE module. */
+ static const char *const nvt_panel_vendors[] = { "csot", "boe" };
+ 
+@@ -998,7 +1164,11 @@
+ 		if (ret)
+ 			return ret;
+ 	}
+-	return misc_register(&nvt->misc);
++	ret = misc_register(&nvt->misc);
++	if (ret)
++		return ret;
++	nvt_proc_register(nvt);
++	return 0;
+ }
+ 
+ static void nvt_shutdown(struct spi_device *spi)
+@@ -1019,6 +1189,7 @@
+ 	/* Do not hold transition_lock while misc_open may be waiting for it. */
+ 	misc_deregister(&nvt->misc);
+ 	nvt_shutdown(spi);
++	nvt_proc_remove(nvt);
+ }
+ 
+ static const struct of_device_id nvt_of_match[] = {
