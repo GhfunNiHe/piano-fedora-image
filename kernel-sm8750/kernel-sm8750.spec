@@ -27,6 +27,7 @@ Source4:        stock-overlay.dtbo
 Source5:        ufdt_apply_overlay
 Source6:        prepare-boot-dtb.py
 Source7:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
+Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
 Patch0003:      0003-nt36532e-thp-add-fedora-proc-compat.patch
 
@@ -156,6 +157,7 @@ fi
 
 %changelog
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-7.piano
+- Enable one MiPPS DFP discovery retry per physical USB attachment
 - Use the v1.6.2 kernel commit and the published piano104 configuration with uclamp
 - Expose the existing exclusive THP stream and pen scan request to the pinned
   piano-fedora runtime without changing the existing misc device path
