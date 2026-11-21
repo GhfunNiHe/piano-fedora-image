@@ -13,7 +13,7 @@ capture, as required by the current driver.
 The proc nodes are optional. Registration failure leaves the existing misc
 stream and pen path available.
 
-Source-commit: da4b783e34bd05d7451a6f904fbf567af1215f99
+Source-commit: 658c139dd9f3f51acd019545febb65f7a7956be2
 ---
 diff --git a/drivers/input/touchscreen/nt36532e-thp/core.c b/drivers/input/touchscreen/nt36532e-thp/core.c
 --- a/drivers/input/touchscreen/nt36532e-thp/core.c

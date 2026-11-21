@@ -2,7 +2,7 @@
 
 Name:           piano-device-support
 Version:        1.6.1
-Release:        4.fedorathp%{?dist}
+Release:        5%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -243,20 +243,14 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
-* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-4.fedorathp
+* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-5
+- Replace the old THP reader with the pinned piano-fedora touch and pen input
+- Select hand calibration by LCD ID and bridge brief gaps in M80p position frames
+- Renew an invalid docked pen bond and retry an empty M80p HID identity once
+- Build the touch and speaker helpers from sources carried in the repository
+- Package device files inside the shared systemd and udev directories
 - Package the v1.6.2 Piano TuneD profiles and real-time scheduler policy
 - Expose the three Piano profiles through Fedora's tuned-ppd service
-
-* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-3.fedorathp
-- Renew an invalid bond for the verified docked pen after an authentication failure
-- Reconnect the M80p once if its first Bluetooth HID identity is empty
-- Build the touch and speaker helpers from sources carried in the repository
-
-* Fri Nov 20 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-2.fedorathp
-- Replace the old THP reader and udev activation with pinned piano-fedora input
-- Keep the upstream pen radio, Bluetooth profile, dock and charging support
-- Package Piano files without owning the shared systemd and udev directories
-- Select hand calibration by LCD ID and bridge brief gaps in M80p position frames
 
 * Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-1
 - Track piano-device-support 1.6.1 from the signed upstream APT archive
