@@ -19,8 +19,8 @@ permissions:
 
 env:
   APT_REPO_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/apt
-  APT_INRELEASE_SHA256: 42c4a3fca9154cfefa3a31407572e41859c21daa07515878ec55972c6c74e919
-  APT_PACKAGES_SHA256: c2ce050090070b692b75f104a852a69cae49332e0f0b6abece6274aae8f68088
+  APT_INRELEASE_SHA256: ee17d7a6f5dd96f1c61af0f9675d027ff3511e6c4e3ac962802020c137f8abf5
+  APT_PACKAGES_SHA256: d1fbb8758ab8182f624d9b49a7baf0c5a2f3abda8e5faa0b1b03f75140cce179
   APT_KEYRING_URL: https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/aa4095a02c8455dfabc3dc42a8bacdb11bacab6b/packaging/piano-archive-keyring/usr/share/keyrings/piano-archive-keyring.gpg
   APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
   GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.0/gunyahvm-1.5.0-source.tar.zst
@@ -327,19 +327,18 @@ jobs:
             "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag-HiFi.conf"
           install -m0644 piano-device-support/audio/50-piano-speaker-upmix.conf \
             "$HOME/rpmbuild/SOURCES/50-piano-speaker-upmix.conf"
-          source_base=https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/v1.6.1
-          curl --fail --location --retry 3 --output \
-            "$HOME/rpmbuild/SOURCES/piano-speaker-rotation.service" \
-            "$source_base/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service"
-          curl --fail --location --retry 3 --output \
-            "$HOME/rpmbuild/SOURCES/piano-speaker-rotation.py" \
-            "$source_base/device/audio/speaker-rotation/speaker-rotation.py"
-          curl --fail --location --retry 3 --output \
-            "$HOME/rpmbuild/SOURCES/piano-speaker-rotation-config.json" \
-            "$source_base/packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json"
-          curl --fail --location --retry 3 --output \
-            "$HOME/rpmbuild/SOURCES/55-piano-speaker-rotation.conf" \
-            "$source_base/packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf"
+          install -m0644 piano-device-support/build-touch.py \
+            "$HOME/rpmbuild/SOURCES/build-touch.py"
+          install -m0644 piano-device-support/pen-button-compat.patch \
+            "$HOME/rpmbuild/SOURCES/pen-button-compat.patch"
+          install -m0644 piano-device-support/pen-m80p-position-gap.patch \
+            "$HOME/rpmbuild/SOURCES/pen-m80p-position-gap.patch"
+          install -m0644 piano-device-support/pen-docked-bond-recovery.patch \
+            "$HOME/rpmbuild/SOURCES/pen-docked-bond-recovery.patch"
+          install -m0644 piano-device-support/audio/speaker-rotation/* "$HOME/rpmbuild/SOURCES/"
+          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
+            -cf "$HOME/rpmbuild/SOURCES/piano-touch-source.tar" \
+            -C piano-device-support/touch-source .
       - name: Install RPM build dependencies
         run: |
           set -euxo pipefail
