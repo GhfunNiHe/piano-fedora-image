@@ -30,6 +30,7 @@ Source7:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar
 Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
 Patch0003:      0003-nt36532e-thp-add-fedora-proc-compat.patch
+Patch0004:      0004-ath12k-piano-warm-restart-reset.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex
 BuildRequires:  gcc hostname kmod lld llvm make openssl-devel perl-interpreter
