@@ -19,8 +19,8 @@ permissions:
 
 env:
   APT_REPO_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/apt
-  APT_INRELEASE_SHA256: ee17d7a6f5dd96f1c61af0f9675d027ff3511e6c4e3ac962802020c137f8abf5
-  APT_PACKAGES_SHA256: d1fbb8758ab8182f624d9b49a7baf0c5a2f3abda8e5faa0b1b03f75140cce179
+  APT_INRELEASE_SHA256: 666127735590fd441d0e240de8377febf1ead785d9a61d6794882074995d1ccb
+  APT_PACKAGES_SHA256: 1e5ce5e7eadd7883a670e149bbf531c5e4e0f26b22afe7858d1b13576e76c807
   APT_KEYRING_URL: https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/aa4095a02c8455dfabc3dc42a8bacdb11bacab6b/packaging/piano-archive-keyring/usr/share/keyrings/piano-archive-keyring.gpg
   APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
   GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.1/gunyahvm-1.5.1-source.tar.zst
