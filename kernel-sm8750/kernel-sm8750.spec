@@ -1,24 +1,24 @@
 %undefine _debugsource_packages
 %global debug_package %{nil}
 
-%global kernel_url https://github.com/yzddmr6/linux-sm8750-piano
+%global kernel_url https://github.com/yzddmr6/linux-sm8750
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT 658c139dd9f3f51acd019545febb65f7a7956be2
-%global KERNEL_SHORT 658c139
+%global KERNEL_COMMIT b5100d5f2e0bb80e1191d521a48596674608eb3d
+%global KERNEL_SHORT b5100d5
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        7.piano%{?dist}
+Release:        8.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        GPL-2.0-only WITH Linux-syscall-note
 URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
-Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-piano-%{KERNEL_COMMIT}.tar.gz
+Source0:        %{kernel_url}/archive/%{KERNEL_COMMIT}.tar.gz#/linux-sm8750-%{KERNEL_COMMIT}.tar.gz
 Source1:        piano-kernel.config
 Source2:        extra-kernel.config
 # Stock Android inputs for assembling piano-boot.dtb; see stock/PROVENANCE.json.
@@ -47,7 +47,7 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.2 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.3 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS and multipath routing
 settings. The package assembles the piano boot DTB from the freshly
@@ -55,7 +55,7 @@ built desktop DTB and the stock Android base DTB/DTBO in stock/, then
 installs it with the v4l2loopback module.
 
 %prep
-%autosetup -p1 -n linux-sm8750-piano-%{KERNEL_COMMIT}
+%autosetup -p1 -n linux-sm8750-%{KERNEL_COMMIT}
 cp %{SOURCE1} .config
 cp %{SOURCE2} extra-kernel.config
 install -m0644 %{SOURCE3} stock-base.dtb
@@ -157,6 +157,12 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Mon Nov 23 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-8.piano
+- Follow the v1.6.3 kernel commit from the linux-sm8750 main branch
+- Refresh the base config from the published piano105 linux-image package
+- Keep the MiPPS DFP discovery retry but leave the USB controller role to the
+  upstream Type-C mode switch
+
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-7.piano
 - Enable one MiPPS DFP discovery retry per physical USB attachment
 - Use the v1.6.2 kernel commit and the published piano104 configuration with uclamp

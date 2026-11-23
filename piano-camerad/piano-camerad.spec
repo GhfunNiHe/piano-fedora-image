@@ -7,7 +7,7 @@ Summary:        Piano camera capture daemon and WirePlumber integration
 License:        MIT
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        piano-source-v1.6.1.tar.gz
+Source0:        piano-source-v1.6.3.tar.gz
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-numpy v4l-utils procps-ng kmod wireplumber

@@ -19,8 +19,8 @@ permissions:
 
 env:
   APT_REPO_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/apt
-  APT_INRELEASE_SHA256: 666127735590fd441d0e240de8377febf1ead785d9a61d6794882074995d1ccb
-  APT_PACKAGES_SHA256: 1e5ce5e7eadd7883a670e149bbf531c5e4e0f26b22afe7858d1b13576e76c807
+  APT_INRELEASE_SHA256: 9de176c4aefb3c536cb0dc67f45bb8d84f8ff8af418363897d2223995fae5653
+  APT_PACKAGES_SHA256: a5bae3d33f82b83eb24af4483d29aee317757c3932cd3e383a77a03fe6e2c7f3
   APT_KEYRING_URL: https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/aa4095a02c8455dfabc3dc42a8bacdb11bacab6b/packaging/piano-archive-keyring/usr/share/keyrings/piano-archive-keyring.gpg
   APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
   GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.1/gunyahvm-1.5.1-source.tar.zst
@@ -45,8 +45,8 @@ env:
   AOSP_UNPACK_BOOTIMG_SHA256: 06b54dd9a07c5281778e29e234e76f6e3faee8bf0c904a5ef88fdee30eeed12e
   IIO_SENSOR_PROXY_SOURCE_URL: https://deb.debian.org/debian/pool/main/i/iio-sensor-proxy/iio-sensor-proxy_3.9.orig.tar.bz2
   IIO_SENSOR_PROXY_SOURCE_SHA256: 19a4ae99b1b8af603fc789841025f9747bf445418d69ec7389e75adb6c8186bf
-  UPSTREAM_TAG: v1.6.1
-  UPSTREAM_COMMIT: aa4095a02c8455dfabc3dc42a8bacdb11bacab6b
+  UPSTREAM_TAG: v1.6.3
+  UPSTREAM_COMMIT: b43fc2b0c6402574ce7fc6ec064275165f7f5699
 
 jobs:
   build:

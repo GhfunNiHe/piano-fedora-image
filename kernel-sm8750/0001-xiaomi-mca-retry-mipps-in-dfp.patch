@@ -1,20 +1,12 @@
 Subject: power: supply: Xiaomi MCA: retry MiPPS discovery in DFP
 
-Source-commit: 658c139dd9f3f51acd019545febb65f7a7956be2
+Source-commit: b5100d5f2e0bb80e1191d521a48596674608eb3d
 
 diff --git a/drivers/power/supply/xiaomi_mca.c b/drivers/power/supply/xiaomi_mca.c
-index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a0319521afa7 100644
+index 3894242..46399e0 100644
 --- a/drivers/power/supply/xiaomi_mca.c
 +++ b/drivers/power/supply/xiaomi_mca.c
-@@ -47,6 +47,7 @@
- #include <linux/spinlock.h>
- #include <linux/unaligned.h>
- #include <linux/units.h>
-+#include <linux/usb/role.h>
- #include <linux/workqueue.h>
- #include <crypto/sha2.h>
- 
-@@ -219,6 +220,7 @@ struct xiaomi_mca_pdo {
+@@ -219,6 +219,7 @@ struct xiaomi_mca_pdo {
  #define MCA_VDM_LEN		16
  #define MCA_DATA_ROLE_UFP	1
  #define MCA_DATA_ROLE_DFP	2
@@ -22,15 +14,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  
  /*
   * Charger types as named by the stock sysfs "real_type" table; 13 and 16
-@@ -691,6 +693,7 @@ struct xiaomi_mca {
- 	u32 pen_generation, pen_attempt_generation;
- 	bool pen_attempted;
- 	bool piano_otg;
-+	struct usb_role_switch *usb_role_sw;
- 	bool config_attempted;
- 	u32 config_generation;
- 	int config_result;
-@@ -796,6 +799,7 @@ struct xiaomi_mca {
+@@ -796,6 +797,7 @@ struct xiaomi_mca {
  	struct notifier_block psy_nb;
  	bool auth_cleanup;	/* verify_process clear still needs confirmation */
  	bool mipps_attempted;	/* throttle repeated exchanges on the current cable */
@@ -38,7 +22,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  	u32 service_generation;
  	u32 policy_generation;
  	bool policy_active;
-@@ -1256,6 +1260,9 @@ static bool xiaomi_mca_write_allowed(u32 prop, const void *data, size_t len)
+@@ -1256,6 +1258,9 @@ static bool xiaomi_mca_write_allowed(u32 prop, const void *data, size_t len)
  	case MCA_PROP_PPS_SELECT:
  		return hv_charge && len == sizeof(u32) &&
  		       xiaomi_mca_pps_word_ok(val);
@@ -48,28 +32,12 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  	case MCA_PROP_VDM_VERSION:
  	case MCA_PROP_VDM_VOLTAGE:
  	case MCA_PROP_VDM_TEMP:
-@@ -1630,6 +1637,77 @@ static int xiaomi_mca_vdm(struct xiaomi_mca *mca, unsigned int generation,
+@@ -1630,6 +1635,57 @@ static int xiaomi_mca_vdm(struct xiaomi_mca *mca, unsigned int generation,
  	return -ETIMEDOUT;
  }
  
-+static void xiaomi_mca_sync_usb_role(struct xiaomi_mca *mca,
-+				     enum usb_role role)
-+{
-+	int ret;
-+
-+	if (!mca->usb_role_sw)
-+		return;
-+
-+	ret = usb_role_switch_set_role(mca->usb_role_sw, role);
-+	if (ret)
-+		dev_warn(mca->dev, "failed to set USB %s role: %d\n",
-+			 role == USB_ROLE_HOST ? "host" : "device", ret);
-+}
-+
 +static int xiaomi_mca_set_role(struct xiaomi_mca *mca, u32 generation, u32 role)
 +{
-+	enum usb_role usb_role = role == MCA_DATA_ROLE_DFP ?
-+				 USB_ROLE_HOST : USB_ROLE_DEVICE;
 +	unsigned long deadline;
 +	int ret;
 +
@@ -83,12 +51,8 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
 +	do {
 +		if (!xiaomi_mca_auth_current(mca, generation))
 +			return -ENODEV;
-+		if (xiaomi_mca_read_u32(mca, MCA_PROP_DATA_ROLE) == role) {
-+			if (!xiaomi_mca_auth_current(mca, generation))
-+				return -ENODEV;
-+			xiaomi_mca_sync_usb_role(mca, usb_role);
++		if (xiaomi_mca_read_u32(mca, MCA_PROP_DATA_ROLE) == role)
 +			return 0;
-+		}
 +		msleep(20);
 +	} while (time_before(jiffies, deadline));
 +
@@ -126,7 +90,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  static bool xiaomi_mca_mipps_digest(struct xiaomi_mca *mca,
  				  const struct piano_mipps_key *key,
  				  u8 message[20], const u8 response[MCA_VDM_LEN],
-@@ -1682,7 +1760,7 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1682,7 +1738,7 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	unsigned int generation = READ_ONCE(mca->service_generation);
  	u32 attachment = READ_ONCE(mca->attach_generation);
  	u32 adapter_id;
@@ -135,7 +99,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  	int i, ret;
  
  	if (!mipps_auth || mca->auth_lost || mca->mipps_attempted || xiaomi_mca_authenticated(mca) ||
-@@ -1707,8 +1785,18 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1707,8 +1763,18 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
  	if (ret)
  		goto finish;
  
@@ -155,7 +119,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  	if (ret)
  		goto finish;
  	ret = xiaomi_mca_read_blob(mca, MCA_PROP_VDM_VERSION, &version, sizeof(version));
-@@ -1771,6 +1859,8 @@ static void xiaomi_mca_mipps_authenticate(struct xiaomi_mca *mca)
+@@ -1771,6 +1837,8 @@ finish:
  			if (xiaomi_mca_auth_current(mca, generation))
  				xiaomi_mca_vdm(mca, generation, 7, NULL, 0);
  		}
@@ -164,33 +128,7 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  		/* An unconfirmed clear blocks voltage negotiation until it succeeds. */
  		mca->auth_cleanup = true;
  		xiaomi_mca_clear_auth(mca);
-@@ -5194,6 +5284,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
- 			mca->otg_active = true;
- 			ret = xiaomi_mca_otg_cp(mca, record.data[0] ?
- 					SC8541_OTG_REVERSE_ON : SC8541_OTG_REVERSE_OFF);
-+			if (!ret && record.data[0])
-+				xiaomi_mca_sync_usb_role(mca, USB_ROLE_HOST);
- 			if (!ret && !record.data[0])
- 				mca->otg_active = false;
- 			break;
-@@ -5209,6 +5301,8 @@ static void xiaomi_mca_process_notifications(struct xiaomi_mca *mca)
- 			 */
- 			ret = xiaomi_mca_read_blob(mca, MCA_PROP_OTG_PLUGIN,
- 						  &plugin, sizeof(plugin));
-+			if (!ret && plugin)
-+				xiaomi_mca_sync_usb_role(mca, USB_ROLE_HOST);
- 			if (!ret && !plugin)
- 				ret = xiaomi_mca_otg_cp(mca, SC8541_OTG_DETACH);
- 			break;
-@@ -5342,6 +5436,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca, u32 *sampled_type)
- 	if (attachment != mca->policy_attach_generation) {
- 		if (xiaomi_mca_cp_stop(mca, "physical disconnect"))
- 			return;
-+		xiaomi_mca_sync_usb_role(mca, USB_ROLE_DEVICE);
- 		mca->ffc_active = false;
- 		mca->ffc_done = false;
- 		mca->charging_done = false;
-@@ -5349,6 +5444,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca, u32 *sampled_type)
+@@ -5349,6 +5417,7 @@ static void xiaomi_mca_policy_poll(struct xiaomi_mca *mca, u32 *sampled_type)
  		mca->term_count = 0;
  		mca->auth_ok = false;
  		mca->mipps_attempted = false;
@@ -198,56 +136,8 @@ index 389424263173bbd19eb014e136d77f88020076d6..e1dce26b89b25fe0857129599bb1a031
  		mca->cp = MCA_CP_OFF;
  		mca->hv = MCA_HV_OFF;
  		mca->aicl_cap_ma = 0;
-@@ -6745,6 +6841,37 @@ static const struct file_operations xiaomi_mca_experiment_fops = {
- };
- #endif
- 
-+static void xiaomi_mca_usb_role_switch_put(void *data)
-+{
-+	usb_role_switch_put(data);
-+}
-+
-+static int xiaomi_mca_get_usb_role_switch(struct xiaomi_mca *mca)
-+{
-+	struct device *dev = mca->dev;
-+
-+	if (!mca->piano_otg)
-+		return 0;
-+
-+	device_for_each_child_node_scoped(dev, connector) {
-+		if (!fwnode_device_is_compatible(connector, "usb-c-connector"))
-+			continue;
-+
-+		mca->usb_role_sw = fwnode_usb_role_switch_get(connector);
-+		if (IS_ERR(mca->usb_role_sw))
-+			return dev_err_probe(dev, PTR_ERR(mca->usb_role_sw),
-+					     "failed to get USB role switch\n");
-+		if (!mca->usb_role_sw)
-+			return 0;
-+
-+		return devm_add_action_or_reset(dev,
-+					       xiaomi_mca_usb_role_switch_put,
-+					       mca->usb_role_sw);
-+	}
-+
-+	return 0;
-+}
-+
- static int xiaomi_mca_probe(struct auxiliary_device *adev,
- 			    const struct auxiliary_device_id *id)
- {
-@@ -6766,6 +6893,9 @@ static int xiaomi_mca_probe(struct auxiliary_device *adev,
- 
- 	mca->charge_end = 100;
- 	dev_set_drvdata(dev, mca);
-+	ret = xiaomi_mca_get_usb_role_switch(mca);
-+	if (ret)
-+		return ret;
- 	init_completion(&mca->ack);
- 	spin_lock_init(&mca->rx_lock);
- 	ret = devm_mutex_init(dev, &mca->transfer_lock);
 diff --git a/drivers/power/supply/xiaomi_mca_test.c b/drivers/power/supply/xiaomi_mca_test.c
-index 9c00e154b2ce085dddabfe10515d8b0a2d73be44..1e6d773b9d667ae0ed933c6d1b75d0a0e8ec466a 100644
+index 9c00e15..1e6d773 100644
 --- a/drivers/power/supply/xiaomi_mca_test.c
 +++ b/drivers/power/supply/xiaomi_mca_test.c
 @@ -502,11 +502,13 @@ struct mca_policy_fixture {

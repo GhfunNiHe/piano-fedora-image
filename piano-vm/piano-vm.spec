@@ -16,7 +16,7 @@ Source0:        crosvm-96e84c3.tar.gz
 Source1:        minijail-7845d899.tar.gz
 Source2:        crosvm-vendor.tar.gz
 Source3:        piano-vm-windows.deb
-Source4:        piano-source-v1.6.1.tar.gz
+Source4:        piano-source-v1.6.3.tar.gz
 
 Patch0001:      piano-vm-0001-gunyah-runtime-GuestAccept-blob-sharing-for-protecte.patch
 Patch0002:      piano-vm-0002-gpu-iceland-gvm-scanout-copy-path-by-default-window-.patch
