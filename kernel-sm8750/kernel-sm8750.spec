@@ -162,8 +162,14 @@ fi
 - Refresh the base config from the published piano105 linux-image package
 - Keep the MiPPS DFP discovery retry but leave the USB controller role to the
   upstream Type-C mode switch
-- Reset the WCN7860 PCIe function before warm restart and scope D3cold to the
-  Piano device
+- Reset the WCN7860 PCIe function before warm restart, abort power up when the
+  reset fails, and scope D3cold to the Piano device
+- Only re-enable D3cold on teardown when the driver disabled it
+- Propagate a failed PCIe function reset out of resume and recovery, wake the
+  resume waiter instead of blocking for the full reset timeout, and release
+  per-device recovery state for every failed group member
+- Apply the existing recovery cooldown once the continuous failure threshold
+  is reached
 
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-7.piano
 - Enable one MiPPS DFP discovery retry per physical USB attachment

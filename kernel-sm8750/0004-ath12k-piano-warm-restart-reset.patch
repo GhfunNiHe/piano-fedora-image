@@ -1,5 +1,69 @@
+diff --git a/drivers/net/wireless/ath/ath12k/core.c b/drivers/net/wireless/ath/ath12k/core.c
+index 478004ab1..a37e3791e 100644
+--- a/drivers/net/wireless/ath/ath12k/core.c
++++ b/drivers/net/wireless/ath/ath12k/core.c
+@@ -226,8 +226,10 @@ int ath12k_core_resume_early(struct ath12k_base *ab)
+ 	reinit_completion(&ab->restart_completed);
+ 	WRITE_ONCE(ab->resuming, true);
+ 	ret = ath12k_hif_power_up(ab);
+-	if (ret)
++	if (ret) {
+ 		ath12k_warn(ab, "failed to power up hif during resume: %d\n", ret);
++		complete(&ab->restart_completed);
++	}
+ 
+ 	return ret;
+ }
+@@ -1734,11 +1736,30 @@ static void ath12k_core_restart(struct work_struct *work)
+ 	complete(&ab->restart_completed);
+ }
+ 
++static void ath12k_core_reset_fail(struct ath12k_base *ab)
++{
++	int fail_count;
++
++	complete(&ab->restart_completed);
++
++	fail_count = atomic_inc_return(&ab->fail_cont_count);
++	if (fail_count >= ATH12K_RESET_MAX_FAIL_COUNT_FIRST)
++		ab->reset_fail_timeout = jiffies + ATH12K_RESET_FAIL_TIMEOUT_HZ;
++
++	if (atomic_dec_if_positive(&ab->reset_count) < 0) {
++		WARN_ON_ONCE(ab->is_reset);
++		return;
++	}
++
++	complete(&ab->reset_complete);
++	ab->is_reset = false;
++}
++
+ static void ath12k_core_reset(struct work_struct *work)
+ {
+ 	struct ath12k_base *ab = container_of(work, struct ath12k_base, reset_work);
+ 	struct ath12k_hw_group *ag = ab->ag;
+-	int reset_count, fail_cont_count, i;
++	int reset_count, fail_cont_count, i, ret;
+ 	long time_left;
+ 
+ 	/* The new MHI devices are probed only after the system resume */
+@@ -1824,7 +1845,14 @@ static void ath12k_core_reset(struct work_struct *work)
+ 		if (!ab)
+ 			continue;
+ 
+-		ath12k_hif_power_up(ab);
++		ret = ath12k_hif_power_up(ab);
++		if (ret) {
++			ath12k_warn(ab, "failed to power up during recovery: %d\n",
++				    ret);
++			ath12k_core_reset_fail(ab);
++			continue;
++		}
++
+ 		ath12k_dbg(ab, ATH12K_DBG_BOOT, "reset started\n");
+ 	}
+ 
 diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
-index 107601916..c16bdd53a 100644
+index 107601916..0f067f7d9 100644
 --- a/drivers/net/wireless/ath/ath12k/pci.c
 +++ b/drivers/net/wireless/ath/ath12k/pci.c
 @@ -8,6 +8,8 @@
@@ -11,26 +75,24 @@ index 107601916..c16bdd53a 100644
  #include <linux/time.h>
  #include <linux/vmalloc.h>
  
-@@ -1454,6 +1456,18 @@ int ath12k_pci_power_up(struct ath12k_base *ab)
+@@ -1454,6 +1456,16 @@ int ath12k_pci_power_up(struct ath12k_base *ab)
  
  	ab_pci->register_window = 0;
  	clear_bit(ATH12K_PCI_FLAG_INIT_DONE, &ab_pci->flags);
 +	if (test_and_clear_bit(ATH12K_PCI_FLAG_RESET_NEEDED, &ab_pci->flags) &&
 +	    ab->hw_rev == ATH12K_HW_WCN7860_HW20 &&
 +	    of_machine_is_compatible("xiaomi,piano")) {
-+		if (ab->resuming)
-+			ret = pci_reset_function_locked(ab_pci->pdev);
-+		else
-+			ret = pci_reset_function(ab_pci->pdev);
++		ret = pci_reset_function(ab_pci->pdev);
 +		if (ret) {
 +			set_bit(ATH12K_PCI_FLAG_RESET_NEEDED, &ab_pci->flags);
 +			ath12k_warn(ab, "failed to reset PCIe device: %d\n", ret);
++			return ret;
 +		}
 +	}
  	ath12k_pci_sw_reset(ab_pci->ab, true);
  
  	/* Disable ASPM during firmware download due to problems switching
-@@ -1495,6 +1509,7 @@ void ath12k_pci_power_down(struct ath12k_base *ab, bool is_suspend)
+@@ -1495,6 +1507,7 @@ void ath12k_pci_power_down(struct ath12k_base *ab, bool is_suspend)
  	ath12k_mhi_stop(ab_pci, is_suspend);
  	clear_bit(ATH12K_PCI_FLAG_INIT_DONE, &ab_pci->flags);
  	ath12k_pci_sw_reset(ab_pci->ab, false);
@@ -38,29 +100,47 @@ index 107601916..c16bdd53a 100644
  }
  
  static const struct ath12k_hif_ops ath12k_pci_hif_ops = {
-@@ -1541,6 +1556,13 @@ ath12k_get_device_family(const struct pci_device_id *pci_dev)
+@@ -1541,6 +1554,19 @@ ath12k_get_device_family(const struct pci_device_id *pci_dev)
  	return ATH12K_DEVICE_FAMILY_MAX;
  }
  
-+static void ath12k_pci_d3cold_enable(void *data)
-+{
-+	struct pci_dev *pdev = data;
++struct ath12k_pci_d3cold_state {
++	struct pci_dev *pdev;
++	bool restore;
++};
 +
-+	pci_d3cold_enable(pdev);
++static void ath12k_pci_d3cold_restore(void *data)
++{
++	struct ath12k_pci_d3cold_state *state = data;
++
++	if (state->restore)
++		pci_d3cold_enable(state->pdev);
 +}
 +
  static int ath12k_pci_probe(struct pci_dev *pdev,
  			    const struct pci_device_id *pci_dev)
  {
-@@ -1602,6 +1624,15 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+@@ -1602,6 +1628,27 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
  		goto err_pci_free_region;
  	}
  
 +	if (ab->hw_rev == ATH12K_HW_WCN7860_HW20 &&
 +	    of_machine_is_compatible("xiaomi,piano")) {
-+		pci_d3cold_disable(pdev);
++		struct ath12k_pci_d3cold_state *d3cold;
++
++		d3cold = devm_kzalloc(&pdev->dev, sizeof(*d3cold), GFP_KERNEL);
++		if (!d3cold) {
++			ret = -ENOMEM;
++			goto err_pci_free_region;
++		}
++
++		d3cold->pdev = pdev;
++		d3cold->restore = !pdev->no_d3cold;
++		if (d3cold->restore)
++			pci_d3cold_disable(pdev);
++
 +		ret = devm_add_action_or_reset(&pdev->dev,
-+					       ath12k_pci_d3cold_enable, pdev);
++					       ath12k_pci_d3cold_restore, d3cold);
 +		if (ret)
 +			goto err_pci_free_region;
 +	}
