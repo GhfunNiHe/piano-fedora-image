@@ -1,16 +1,17 @@
 diff --git a/drivers/net/wireless/ath/ath12k/pci.c b/drivers/net/wireless/ath/ath12k/pci.c
-index 107601916..375dfef37 100644
+index 107601916..c16bdd53a 100644
 --- a/drivers/net/wireless/ath/ath12k/pci.c
 +++ b/drivers/net/wireless/ath/ath12k/pci.c
-@@ -8,6 +8,7 @@
+@@ -8,6 +8,8 @@
  #include <linux/interrupt.h>
  #include <linux/msi.h>
  #include <linux/pci.h>
 +#include <linux/of.h>
++#include <linux/device.h>
  #include <linux/time.h>
  #include <linux/vmalloc.h>
  
-@@ -1454,6 +1455,14 @@ int ath12k_pci_power_up(struct ath12k_base *ab)
+@@ -1454,6 +1456,18 @@ int ath12k_pci_power_up(struct ath12k_base *ab)
  
  	ab_pci->register_window = 0;
  	clear_bit(ATH12K_PCI_FLAG_INIT_DONE, &ab_pci->flags);
@@ -18,14 +19,18 @@ index 107601916..375dfef37 100644
 +	    ab->hw_rev == ATH12K_HW_WCN7860_HW20 &&
 +	    of_machine_is_compatible("xiaomi,piano")) {
 +		if (ab->resuming)
-+			pci_reset_function_locked(ab_pci->pdev);
++			ret = pci_reset_function_locked(ab_pci->pdev);
 +		else
-+			pci_reset_function(ab_pci->pdev);
++			ret = pci_reset_function(ab_pci->pdev);
++		if (ret) {
++			set_bit(ATH12K_PCI_FLAG_RESET_NEEDED, &ab_pci->flags);
++			ath12k_warn(ab, "failed to reset PCIe device: %d\n", ret);
++		}
 +	}
  	ath12k_pci_sw_reset(ab_pci->ab, true);
  
  	/* Disable ASPM during firmware download due to problems switching
-@@ -1495,6 +1504,7 @@ void ath12k_pci_power_down(struct ath12k_base *ab, bool is_suspend)
+@@ -1495,6 +1509,7 @@ void ath12k_pci_power_down(struct ath12k_base *ab, bool is_suspend)
  	ath12k_mhi_stop(ab_pci, is_suspend);
  	clear_bit(ATH12K_PCI_FLAG_INIT_DONE, &ab_pci->flags);
  	ath12k_pci_sw_reset(ab_pci->ab, false);
@@ -33,22 +38,36 @@ index 107601916..375dfef37 100644
  }
  
  static const struct ath12k_hif_ops ath12k_pci_hif_ops = {
-@@ -1564,6 +1574,7 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
- 	ab->fw_mode = ATH12K_QMI_FIRMWARE_MODE_NORMAL;
- 	pci_set_drvdata(pdev, ab);
- 	spin_lock_init(&ab_pci->window_lock);
-+	pci_d3cold_disable(pdev);
+@@ -1541,6 +1556,13 @@ ath12k_get_device_family(const struct pci_device_id *pci_dev)
+ 	return ATH12K_DEVICE_FAMILY_MAX;
+ }
  
- 	ret = ath12k_pci_claim(ab_pci, pdev);
- 	if (ret) {
-@@ -1706,6 +1717,7 @@ static void ath12k_pci_remove(struct pci_dev *pdev)
- 	struct ath12k_base *ab = pci_get_drvdata(pdev);
- 	struct ath12k_pci *ab_pci = ath12k_pci_priv(ab);
- 
++static void ath12k_pci_d3cold_enable(void *data)
++{
++	struct pci_dev *pdev = data;
++
 +	pci_d3cold_enable(pdev);
- 	ath12k_pci_set_irq_affinity_hint(ab_pci, NULL);
++}
++
+ static int ath12k_pci_probe(struct pci_dev *pdev,
+ 			    const struct pci_device_id *pci_dev)
+ {
+@@ -1602,6 +1624,15 @@ static int ath12k_pci_probe(struct pci_dev *pdev,
+ 		goto err_pci_free_region;
+ 	}
  
- 	if (test_bit(ATH12K_FLAG_QMI_FAIL, &ab->dev_flags)) {
++	if (ab->hw_rev == ATH12K_HW_WCN7860_HW20 &&
++	    of_machine_is_compatible("xiaomi,piano")) {
++		pci_d3cold_disable(pdev);
++		ret = devm_add_action_or_reset(&pdev->dev,
++					       ath12k_pci_d3cold_enable, pdev);
++		if (ret)
++			goto err_pci_free_region;
++	}
++
+ 	ret = ath12k_pci_msi_alloc(ab_pci);
+ 	if (ret) {
+ 		ath12k_err(ab, "failed to alloc msi: %d\n", ret);
 diff --git a/drivers/net/wireless/ath/ath12k/pci.h b/drivers/net/wireless/ath/ath12k/pci.h
 index 0e0e2020c..434390a5c 100644
 --- a/drivers/net/wireless/ath/ath12k/pci.h

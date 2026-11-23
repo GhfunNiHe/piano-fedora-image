@@ -162,6 +162,8 @@ fi
 - Refresh the base config from the published piano105 linux-image package
 - Keep the MiPPS DFP discovery retry but leave the USB controller role to the
   upstream Type-C mode switch
+- Reset the WCN7860 PCIe function before warm restart and scope D3cold to the
+  Piano device
 
 * Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-7.piano
 - Enable one MiPPS DFP discovery retry per physical USB attachment
