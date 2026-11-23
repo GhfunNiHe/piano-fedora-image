@@ -2,7 +2,7 @@
 
 Name:           piano-sensors
 Version:        0.1+20261112.1
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Qualcomm ADSP sensor service and configuration for Piano
 License:        GPL-3.0-or-later AND LicenseRef-Proprietary
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -64,7 +64,7 @@ install -Dm644 piano-source/device/sensors/qrtr.py \
 install -d %{buildroot}%{_datadir}/piano/sensors
 cp -a piano-source/firmware/sensors/odm piano-source/firmware/sensors/vendor \
     %{buildroot}%{_datadir}/piano/sensors/
-install -d %{buildroot}%{_datadir}/piano/sensors/registry
+install -d %{buildroot}%{_datadir}/piano/sensors/registry/registry
 install -Dm644 piano-source/LICENSE \
     %{buildroot}%{_datadir}/doc/piano-sensors/copyright
 install -Dm644 piano-source/NOTICE \
@@ -115,6 +115,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Mon Nov 23 2026 Piano RPM template <noreply@localhost> - 0.1+20261112.1-3
+- Package the inner registry/registry seed directory too; without it
+  sensors-prepare rejects the tree as an invalid pristine registry
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261112.1-2
 - Build hexagonrpcd and libhexagonrpc from the pinned upstream source
 - Keep the SensorProxy service drop-in with the iio-sensor-proxy-ssc package
