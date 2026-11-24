@@ -1,0 +1,48 @@
+--- a/device/camera/piano-camerad.c
++++ b/device/camera/piano-camerad.c
+@@ -350,6 +350,34 @@
+ 	return setup_link(tp, src->id, src_pad, sink->id, sink_pad, true);
+ }
+ 
++static int clear_csid_outputs(struct topo *tp,
++			      const struct media_v2_entity *csid,
++			      uint16_t keep_pad)
++{
++	for (unsigned int i = 0; i < tp->t.num_links; i++) {
++		const struct media_v2_link *l = &tp->links[i];
++		const struct media_v2_pad *ps, *pk;
++
++		if ((l->flags & MEDIA_LNK_FL_LINK_TYPE) !=
++		    MEDIA_LNK_FL_DATA_LINK ||
++		    !(l->flags & MEDIA_LNK_FL_ENABLED) ||
++		    (l->flags & MEDIA_LNK_FL_IMMUTABLE))
++			continue;
++
++		ps = topo_pad(tp, l->source_id);
++		pk = topo_pad(tp, l->sink_id);
++		if (!ps || !pk || ps->entity_id != csid->id ||
++		    ps->index == keep_pad)
++			continue;
++
++		if (setup_link(tp, ps->entity_id, ps->index,
++			       pk->entity_id, pk->index, false) < 0)
++			return -1;
++	}
++
++	return 0;
++}
++
+ static int find_media(void)
+ {
+ 	char path[32];
+@@ -710,7 +738,9 @@
+ 		}
+ 	}
+ 
+-	if (route(&tp, phy, 1, csid, 0) < 0 || route(&tp, csid, 4, vfe, 0) < 0) {
++	if (route(&tp, phy, 1, csid, 0) < 0 ||
++	    clear_csid_outputs(&tp, csid, 4) < 0 ||
++	    route(&tp, csid, 4, vfe, 0) < 0) {
+ 		logmsg(c, "media links: %s", strerror(errno));
+ 		goto out;
+ 	}

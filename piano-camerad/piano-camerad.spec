@@ -2,12 +2,13 @@
 
 Name:           piano-camerad
 Version:        0.1+20261113.2
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano camera capture daemon and WirePlumber integration
 License:        MIT
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        piano-source-v1.6.3.tar.gz
+Patch0001:      0001-camera-disable-stale-rdi-links.patch
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros
 Requires:       python3 python3-numpy v4l-utils procps-ng kmod wireplumber
@@ -22,7 +23,7 @@ The kernel RPM is expected to provide piano-camera-loopback and the matching
 v4l2loopback module for the installed Piano kernel.
 
 %prep
-%autosetup -n piano-source
+%autosetup -p1 -n piano-source
 
 %build
 gcc %{optflags} -fvect-cost-model=cheap -Wall -Wextra \
@@ -74,6 +75,10 @@ install -Dm644 device/camera/source.json \
 %systemd_postun_with_restart piano-camerad.service
 
 %changelog
+* Tue Nov 24 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261113.2-2
+- Disable stale CSID RDI links before starting the PIX pipeline, fixing the
+  rear camera STREAMON -EPIPE
+
 * Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 0.1+20261113.2-1
 - Update to the piano-camerad version in the signed upstream APT archive
 
