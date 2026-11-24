@@ -318,6 +318,8 @@ jobs:
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 piano-sensors/patches/*.patch \
             "$HOME/rpmbuild/SOURCES/"
+          install -m0644 piano-camerad/*.patch \
+            "$HOME/rpmbuild/SOURCES/"
           install -m0644 qualcomm-iris-vaapi/000*.patch \
             "$HOME/rpmbuild/SOURCES/"
           for patchfile in piano-vm/patches/*.patch; do
