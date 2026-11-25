@@ -1,14 +1,15 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           piano-sensors
 Version:        0.1+20261112.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        Qualcomm ADSP sensor service and configuration for Piano
-License:        GPL-3.0-or-later AND LicenseRef-Proprietary
+License:        GPL-3.0-or-later AND MIT AND LicenseRef-Proprietary
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 Source0:        https://github.com/linux-msm/hexagonrpc/archive/598b591ae9da6a6cfe2ca5ea78998019ca6395ea.tar.gz#/hexagonrpc-598b591a.tar.gz
-Source1:        piano-source-v1.6.3.tar.gz
+Source1:        piano-source-%{upstream_tag}.tar.gz
 Patch0000:      0001-fix-type-sequence-marshalling.patch
 Patch0001:      0002-avoid-unaligned-metadata-store-and-null-test-comparison.patch
 Patch0002:      0003-serve-odm-and-explicit-scratch-registry.patch
@@ -115,6 +116,10 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Wed Nov 25 2026 Piano RPM template <noreply@localhost> - 0.1+20261112.1-4
+- Add MIT: sensors-prepare, piano-hexagonrpcd-sns.service, the udev rule and
+  qrtr.py carry MIT SPDX headers next to the GPL-3.0-or-later daemon
+
 * Mon Nov 23 2026 Piano RPM template <noreply@localhost> - 0.1+20261112.1-3
 - Package the inner registry/registry seed directory too; without it
   sensors-prepare rejects the tree as an invalid pristine registry

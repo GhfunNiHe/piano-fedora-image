@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 # These are linker-only capabilities incorrectly inferred from bundled DSP ELF files.
 %global __requires_exclude ^(libc[.]so|libgcc[.]so)$
@@ -10,7 +11,7 @@ Summary:        Qualcomm Hexagon v79 FastRPC and local NPU demo runtime
 License:        MIT AND BSD-3-Clause
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        piano-source-v1.6.3.tar.gz
+Source0:        piano-source-%{upstream_tag}.tar.gz
 Source1:        llama.tar.gz
 Source2:        fastrpc.tar.gz
 Source3:        hexagon-sdk-v6.7.0.0-amd64-lnx.tar.xz

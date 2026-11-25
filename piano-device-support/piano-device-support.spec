@@ -1,41 +1,36 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           piano-device-support
-Version:        1.6.1
-Release:        7%{?dist}
+Version:        1.6.3
+Release:        1%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        piano-device-support.deb
-Source1:        Xiaomi-Pad-8-Pro.conf
-Source2:        Xiaomi-Pad-8-Pro-HiFi.conf
-Source3:        Piano-Capture-Diag.conf
-Source4:        Piano-Capture-Diag-HiFi.conf
-Source5:        50-piano-speaker-upmix.conf
-# Speaker rotation files from xiaomipad-8pro-mainline v1.6.1.
-Source6:        piano-speaker-rotation.service
-Source7:        piano-speaker-rotation.py
-Source8:        piano-speaker-rotation-config.json
-Source9:        55-piano-speaker-rotation.conf
-# Staged from this repository's touch-source/ directory for the SRPM.
-Source10:       piano-touch-source.tar
-Source14:       build-touch.py
-Source15:       pen-button-compat.patch
-Source16:       pen-m80p-position-gap.patch
-# Power profiles and real-time scheduler policy from xiaomipad-8pro-mainline v1.6.2.
-Source17:       piano-balanced.conf
-Source18:       piano-performance.conf
-Source19:       piano-power-saver.conf
-Source20:       piano-ppd.conf
-Source21:       50-piano-profiles.conf
-Source22:       50-piano-uclamp.conf
-Patch0:         pen-docked-bond-recovery.patch
+Source0:        piano-source-%{upstream_tag}.tar.gz
+# Fedora keeps its own speaker rotation helper: the upstream one only follows
+# GNOME, this one follows Mutter or KScreen.
+Source1:        piano-speaker-rotation.py
+# Public panel calibrations extracted from the stock OTA THP configuration, and
+# the Fedora panel selector; see docs/upstream-sync.md.
+Source2:        piano-csot-thp-calibration.json
+Source3:        piano-boe-thp-calibration.json
+Source4:        piano-thp-calibration
+Source5:        10-piano-thp-calibration.conf
+# Fedora carries local fixes as patches; the tree itself stays unmodified.
+Patch0001:      0001-pen-docked-bond-recovery.patch
+Patch0002:      0002-pipewire-enable-the-speaker-upmix.patch
+Patch0003:      0003-speaker-rotation-wait-for-plasma.patch
+Patch0004:      0004-dracut-resolve-the-fedora-busybox.patch
+BuildRequires:  gcc-c++
+BuildRequires:  json-devel
+BuildRequires:  make
+BuildRequires:  python3
+BuildRequires:  systemd-devel
 BuildRequires:  systemd-rpm-macros
-BuildRequires:  dpkg
-BuildRequires:  gcc gcc-c++ git-core glibc-static libstdc++-static make patch python3 tar
-BuildRequires:  json-devel systemd-devel pkgconf-pkg-config
 Requires:       python3 python3-gobject python3-pyudev systemd-libs
+Requires:       busybox
 Requires:       v4l-utils
 Requires:       pipewire-utils
 Requires:       tuned-ppd
@@ -47,55 +42,60 @@ Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 
 %description
 Runtime device support for the Xiaomi Pad 8 Pro: platform services,
-piano-fedora touch and pen tip input, the upstream pen radio and charging
+the upstream touch and pen tip input, the upstream pen radio and charging
 helpers, power/sleep policy, and developer mode. Kernel boot policy is
 supplied by a separate hook package.
 
 %prep
-mkdir -p payload
-dpkg-deb -x %{SOURCE0} payload
-patch --batch --forward --fuzz=0 -p1 -d payload -i %{PATCH0}
-mkdir -p touch-source
-cd touch-source
-tar -xf %{SOURCE10}
+%autosetup -n piano-source -p1
 
 %build
-cd touch-source
-python3 %{SOURCE14} \
-    --fedora piano-fedora-55f7c62cbedfb3688f7a99cca849c3bc592e3f04 \
-    --sunuefi Project-SunUEFI-f06ad9eeb4d505ffae70c2814b089e381ae72145 \
-    --debian debian-piano-a75f8c5d5fa099d65c171ac839c2e3bb6c63ec45 \
-    --integration xiaomipad-8pro-mainline-d9aa8fb1cf91e45224244726a5d639f45e5538e2 \
-    --pen-button-patch %{SOURCE15} \
-    --pen-position-patch %{SOURCE16} \
-    --output touch-payload
+# The Fedora package builds the same reader upstream ships, instead of taking it
+# from the Ubuntu payload.
+make -C device/piano-thp build/piano-thp-live CXXFLAGS="%{optflags} -std=c++20"
 
 %install
-cd payload
-install -d %{buildroot}%{_prefix}
-cp -a usr/. %{buildroot}%{_prefix}/
-cp -a etc/. %{buildroot}/etc/
+# Upstream's Debian payload is this packaging tree plus the shared charging
+# policy and a few files from the rest of the source tree.
+cp -a packaging/piano-device-support/. %{buildroot}/
+cp -a device/charge-policy/. %{buildroot}/
 
-# Keep the dracut module because built-in remoteproc/display drivers probe
-# before the persistent root exists. Both optional hook packages own boot files.
+install -Dm755 device/virtualization/piano-gunyah-load \
+    %{buildroot}%{_libexecdir}/piano/piano-gunyah-load
+install -Dm755 device/check/piano-check %{buildroot}%{_bindir}/piano-check
+install -Dm755 device/platform/piano-physical-platform \
+    %{buildroot}%{_libexecdir}/piano/piano-physical-platform
+install -Dm755 device/bluetooth/bluetooth-address.py \
+    %{buildroot}%{_libexecdir}/piano/bluetooth-address
+install -Dm755 device/bluetooth/piano-pen-radio.py \
+    %{buildroot}%{_libexecdir}/piano/piano-pen-radio
+install -Dm644 device/bluetooth/p81c-radio.json \
+    %{buildroot}%{_datadir}/piano/pen/p81c-radio.json
+install -Dm755 initramfs/usb-diag %{buildroot}%{_libexecdir}/piano/usb-diag
+install -Dm755 device/piano-thp/build/piano-thp-live \
+    %{buildroot}%{_libexecdir}/piano/piano-thp-live
+# The debug helpers and the dracut module call this path; Fedora's BusyBox is a
+# distribution package, so link it instead of shipping a static copy.
+ln -s ../../bin/busybox %{buildroot}%{_libexecdir}/piano/busybox
+
+# Upstream derives this file from initramfs/network.json at package time.
+python3 -c 'import json, sys; data = json.load(open("initramfs/network.json")); open(sys.argv[1], "w").write("".join(f"PIANO_{key.upper()}={value}\n" for key, value in data.items()))' \
+    %{buildroot}/etc/piano-network
+
+# Power profiles shared with the Ubuntu payload.
+for profile in piano-balanced piano-performance piano-power-saver; do
+    install -Dm644 "device/power/tuned/profiles/$profile/tuned.conf" \
+        "%{buildroot}%{_prefix}/lib/tuned/profiles/$profile/tuned.conf"
+done
+install -Dm644 device/power/tuned/ppd.conf \
+    %{buildroot}%{_sysconfdir}/tuned/piano-ppd.conf
+
+# Boot policy, the Android switch UI and the GDM settings belong to the hook
+# packages or to Ubuntu; never install them here.
 rm -f %{buildroot}/etc/kernel/postinst.d/zz-piano-boot
 rm -f %{buildroot}/etc/kernel/postrm.d/zz-piano-boot
 rm -f %{buildroot}/etc/initramfs/post-update.d/zz-piano-boot
 rm -f %{buildroot}%{_prefix}/sbin/piano-boot-update
-rm -f %{buildroot}%{_prefix}/sbin/piano-boot-switch
-rm -f %{buildroot}%{_prefix}/sbin/piano-slot-success
-rm -f %{buildroot}%{_libexecdir}/piano/piano-emergency-android
-# The selected candidate touch stack owns its input reader.
-rm -f %{buildroot}%{_unitdir}/piano-thp.service
-rm -f %{buildroot}%{_libexecdir}/piano/piano-thp-live
-# Keep the existing misc-node alias and network policy. The target kernel's
-# SPI driver is named nt36532e-thp, so the SunUEFI SPI rule would never match.
-# Activate the new reader from the same node that activated the old reader.
-grep -qF 'ENV{SYSTEMD_WANTS}+="piano-thp.service"' \
-    %{buildroot}%{_udevrulesdir}/71-piano.rules
-sed -i 's/ENV{SYSTEMD_WANTS}+="piano-thp.service"/ENV{SYSTEMD_WANTS}+="piano-touch.service"/' \
-    %{buildroot}%{_udevrulesdir}/71-piano.rules
-rm -rf %{buildroot}%{_prefix}/lib/piano/boot
 rm -f %{buildroot}%{_unitdir}/piano-slot-success.service
 rm -f %{buildroot}%{_unitdir}/piano-emergency-android.service
 rm -f %{buildroot}%{_datadir}/applications/piano-switch-to-android.desktop
@@ -111,55 +111,51 @@ rmdir %{buildroot}/etc/kernel 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs/post-update.d 2>/dev/null || :
 rmdir %{buildroot}/etc/initramfs 2>/dev/null || :
 
-install -Dm644 %{SOURCE1} \
-    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf
-install -Dm644 %{SOURCE2} \
-    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Xiaomi-Pad-8-Pro/HiFi.conf
-install -Dm644 %{SOURCE3} \
-    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf
-install -Dm644 %{SOURCE4} \
-    %{buildroot}%{_datadir}/alsa/ucm2/Qualcomm/sm8750/Piano-Capture-Diag/HiFi.conf
-install -d %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750
-ln -s ../../Qualcomm/sm8750/Xiaomi-Pad-8-Pro/Xiaomi-Pad-8-Pro.conf \
-    %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Xiaomi-Pad-8-Pro.conf
-ln -s ../../Qualcomm/sm8750/Piano-Capture-Diag/Piano-Capture-Diag.conf \
-    %{buildroot}%{_datadir}/alsa/ucm2/conf.d/sm8750/Piano-Capture-Diag.conf
-install -Dm644 %{SOURCE5} \
+# The UCM tree ships its own conf.d links.
+install -d %{buildroot}%{_datadir}/alsa/ucm2
+cp -a device/audio/ucm2/. %{buildroot}%{_datadir}/alsa/ucm2/
+install -Dm644 \
+    packaging/piano-ubuntu-desktop/usr/share/pipewire/client.conf.d/50-piano-speaker-upmix.conf \
     %{buildroot}%{_datadir}/pipewire/client.conf.d/50-piano-speaker-upmix.conf
-install -Dm644 %{SOURCE5} \
+install -Dm644 \
+    packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf \
     %{buildroot}%{_datadir}/pipewire/pipewire-pulse.conf.d/50-piano-speaker-upmix.conf
-install -Dm644 %{SOURCE6} \
-    %{buildroot}%{_userunitdir}/piano-speaker-rotation.service
-install -Dm755 %{SOURCE7} \
-    %{buildroot}%{_libexecdir}/piano/speaker-rotation.py
-install -Dm644 %{SOURCE8} \
-    %{buildroot}%{_datadir}/piano/speaker-rotation/config.json
-install -Dm644 %{SOURCE9} \
+install -Dm644 \
+    packaging/piano-ubuntu-desktop/usr/share/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf \
     %{buildroot}%{_datadir}/pipewire/pipewire.conf.d/55-piano-speaker-rotation.conf
-install -Dm644 %{SOURCE17} \
-    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-balanced/tuned.conf
-install -Dm644 %{SOURCE18} \
-    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-performance/tuned.conf
-install -Dm644 %{SOURCE19} \
-    %{buildroot}%{_prefix}/lib/tuned/profiles/piano-power-saver/tuned.conf
-install -Dm644 %{SOURCE20} %{buildroot}%{_sysconfdir}/tuned/piano-ppd.conf
-install -Dm644 %{SOURCE21} \
+install -Dm644 packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service \
+    %{buildroot}%{_userunitdir}/piano-speaker-rotation.service
+install -Dm755 %{SOURCE1} \
+    %{buildroot}%{_libexecdir}/piano/speaker-rotation.py
+install -Dm644 packaging/piano-ubuntu-desktop/usr/share/piano/speaker-rotation/config.json \
+    %{buildroot}%{_datadir}/piano/speaker-rotation/config.json
+install -Dm644 \
+    packaging/piano-ubuntu-desktop/usr/lib/systemd/system/tuned-ppd.service.d/50-piano-profiles.conf \
     %{buildroot}%{_unitdir}/tuned-ppd.service.d/50-piano-profiles.conf
-install -Dm644 %{SOURCE22} %{buildroot}%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
-cp -a ../touch-source/touch-payload/. %{buildroot}/
+install -Dm644 packaging/piano-ubuntu-desktop/usr/lib/sysctl.d/50-piano-uclamp.conf \
+    %{buildroot}%{_prefix}/lib/sysctl.d/50-piano-uclamp.conf
+
+# The upstream reader takes one calibration file; Fedora ships the public
+# calibration of both panel modules and selects it from the kernel's panel_vendor.
+install -Dm644 %{SOURCE2} \
+    %{buildroot}%{_datadir}/piano/thp/piano-csot.json
+install -Dm644 %{SOURCE3} \
+    %{buildroot}%{_datadir}/piano/thp/piano-boe.json
+install -Dm755 %{SOURCE4} \
+    %{buildroot}%{_libexecdir}/piano/piano-thp-calibration
+install -Dm644 %{SOURCE5} \
+    %{buildroot}%{_unitdir}/piano-thp.service.d/10-piano-thp-calibration.conf
 
 # Boot status is optional because the hook packages are separate.
 sed -i \
     -e "s/, 'piano-emergency-android.service'//" \
     -e "s/'piano-slot-success.service', //" \
-    -e "s/piano-thp.service/piano-touch.service/g" \
     -e "/add('SKIP', 'Boot slot and image sets'/,+2d" \
     %{buildroot}%{_bindir}/piano-check
 
 %files
-%license %{_datadir}/doc/piano-device-support/copyright
-%license %{_datadir}/licenses/piano-device-support/touch-input
-%doc %{_datadir}/doc/piano-device-support/NOTICE
+%license LICENSE
+%doc NOTICE
 %config(noreplace) /etc/security/limits.d/90-piano-gunyah.conf
 %config(noreplace) /etc/piano-network
 %config(noreplace) /etc/dracut.conf.d/90-piano.conf
@@ -202,24 +198,20 @@ sed -i \
 %{_datadir}/tablet-charge/device
 %{_datadir}/ubuntu/gnome-shell/modes/ubuntu.json
 %{_datadir}/piano/pen
-%{_datadir}/piano/touch
-%{_bindir}/piano-touch-view
-%config(noreplace) %{_sysconfdir}/systemd/system/piano-touch.service.d/20-fast-restart.conf
+%{_datadir}/piano/thp
 %{_datadir}/polkit-1/actions/io.github.piano.devmode.policy
 %{_datadir}/polkit-1/actions/io.github.piano.gunyah-load.policy
 %{_datadir}/polkit-1/actions/org.tablet.charge-behaviour.policy
 
 %post
-%systemd_post piano-debug-timeout.service piano-pen-radio.service piano-touch.service tablet-charge-events.service tablet-charge-sample.timer
+%systemd_post piano-debug-timeout.service piano-pen-radio.service tablet-charge-events.service tablet-charge-sample.timer
 %systemd_user_post piano-speaker-rotation.service
 if command -v systemctl >/dev/null 2>&1; then
     systemctl --global enable piano-speaker-rotation.service >/dev/null 2>&1 || :
     systemctl disable --now piano-debug.service >/dev/null 2>&1 || :
-    systemctl disable --now piano-thp.service >/dev/null 2>&1 || :
+    # Releases before 1.6.1-8 started the staged piano-touch reader instead.
+    systemctl disable --now piano-touch.service >/dev/null 2>&1 || :
     systemctl enable --now tablet-charge-events.service tablet-charge-sample.timer >/dev/null 2>&1 || :
-    if [ -r /proc/nvt_thp_stream ]; then
-        systemctl start piano-touch.service >/dev/null 2>&1 || :
-    fi
 fi
 rm -f /etc/systemd/system/multi-user.target.wants/piano-debug.service
 if command -v udevadm >/dev/null 2>&1; then
@@ -227,87 +219,46 @@ if command -v udevadm >/dev/null 2>&1; then
     if [ -e /sys/class/misc/gunyah ]; then
         udevadm trigger --action=change /sys/class/misc/gunyah || :
     fi
+    # Upstream piano-thp.service is started by udev for the touch node.
+    for node in /sys/class/misc/nvt-thp-*; do
+        [ -e "$node" ] && udevadm trigger --action=change "$node" || :
+    done
 fi
 
 %preun
-%systemd_preun piano-touch.service tablet-charge-events.service tablet-charge-sample.timer
+%systemd_preun tablet-charge-events.service tablet-charge-sample.timer
 %systemd_user_preun piano-speaker-rotation.service
 if [ "$1" -eq 0 ] && command -v systemctl >/dev/null 2>&1; then
     systemctl --global disable piano-speaker-rotation.service >/dev/null 2>&1 || :
 fi
 
 %postun
-%systemd_postun_with_restart piano-touch.service
 if command -v udevadm >/dev/null 2>&1; then
     udevadm control --reload-rules || :
 fi
 
 %changelog
-* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-7
-- Stop the per-second kscreen-doctor respawn: poll every 3s, reuse a
-  successful reading, back off on failure and retry after a 300s cooldown
-- Wait for the KDE session bus before polling so the service starts after
-  the user logs in
+* Wed Nov 25 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.3-1
+- Build the package from the upstream source tag instead of converting the
+  Ubuntu payload; every file now comes from the tree except the Fedora confs
+- Build piano-thp-live in the package with the Fedora toolchain
+- Ship the public CSOT and BOE THP calibrations extracted from the stock OTA
+  configuration and select one from the kernel's panel_vendor, so the upstream
+  reader keeps working without a per-unit file
+- Keep the M80p docked bond renewal and the empty HID identity retry as a patch
+  on the upstream pen radio
+- Carry the speaker up-mix, the Plasma session ordering and the BusyBox change
+  as patches instead of whole files
+- Use the distribution BusyBox for the dracut module and the debug helpers
+- The kernel THP proc compatibility patch is no longer needed
 
-* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-6
-- Make speaker rotation follow GNOME Mutter or KDE KScreen, with an
-  iio-sensor-proxy orientation fallback for other desktops
-- Correct the KScreen left/right mapping so 90 and 270 degrees are not swapped
-
-* Sat Nov 21 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-5
-- Replace the old THP reader with the pinned piano-fedora touch and pen input
-- Select hand calibration by LCD ID and bridge brief gaps in M80p position frames
-- Renew an invalid docked pen bond and retry an empty M80p HID identity once
-- Build the touch and speaker helpers from sources carried in the repository
-- Package device files inside the shared systemd and udev directories
-- Package the v1.6.2 Piano TuneD profiles and real-time scheduler policy
-- Expose the three Piano profiles through Fedora's tuned-ppd service
-
-* Thu Nov 19 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-1
-- Track piano-device-support 1.6.1 from the signed upstream APT archive
-
-* Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.0-1
-- Update the device payload to v1.5.0
-- Add charge pause control and speaker rotation hardware policy
-- Exclude the GDM ambient-brightness policy from device support
-
-* Mon Nov 16 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.1-1
-- Update the device payload to v1.4.1
-
-* Sun Nov 15 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-7
-- Update device payload to v1.4.0 and move boot hooks into separate packages
-
-* Fri Nov 13 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.3.0.3-1
-- Add zstd level 19 initramfs compression and package CDSP firmware into initramfs
-
-* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.2.0.1-1
-- Update to the v1.2.0 device support payload
-- Retire the old default USB debug console
-- Enable pen radio initialization through the systemd preset
-
-* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-6
-- Select the boot image source by initramfs mtime instead of version sorting
-- Avoid treating Git hash releases such as gd50fa91 as older than gd2710cd
-
-* Tue Nov 10 2026 Piano RPM template <noreply@localhost> - 1.1.1-5
-- Remove the obsolete userspace MiPPS authentication helper dependency
-- Obsolete xiaomi-mipps-auth; the v1.1.1 kernel owns charger authentication
-
-* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-4
-- Move ALSA UCM and speaker up-mix policy into device support
-
-* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-3
-- Restore the Piano dracut module and firmware collection
-- Include ADSP firmware in the initramfs for early remoteproc startup
-
-* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-2
-- Support both Debian initrd.img and Fedora dracut initramfs names
-- Require gawk and dtc for kernel post-install image regeneration
-
-* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.1-1
-- Update the payload to project release v1.1.1
-
-* Mon Nov 09 2026 Piano RPM template <noreply@localhost> - 1.1.0-1
-- Initial binary conversion template
-- Replace the old kernel image hooks with the local slot-update hook
-- Remove the piano-boot-switch, slot-success, and emergency Android UI
+* Wed Nov 25 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.1-8
+- Ship the upstream piano-thp input owner again instead of the staged
+  piano-fedora touch and pen runtime; the M80p pen works through upstream from
+  v1.4.0 on
+- Drop build-touch.py, the pen button, position gap and docked bond patches,
+  and the vendored touch sources
+- Ship the public CSOT and BOE THP calibrations extracted from the stock OTA
+  configuration and select one from the kernel's panel_vendor
+- Keep the upstream piano-thp.service, its udev activation and the
+  /dev/piano-touch alias; the kernel THP proc compatibility patch is gone

@@ -62,7 +62,6 @@ jobs:
             "$HOME/rpmbuild/SOURCES/"
           install -m0644 kernel-sm8750/0001-xiaomi-mca-retry-mipps-in-dfp.patch \
             kernel-sm8750/0002-asoc-reset-runtime-component-count.patch \
-            kernel-sm8750/0003-nt36532e-thp-add-fedora-proc-compat.patch \
             kernel-sm8750/0004-ath12k-piano-warm-restart-reset.patch \
             "$HOME/rpmbuild/SOURCES/"
 

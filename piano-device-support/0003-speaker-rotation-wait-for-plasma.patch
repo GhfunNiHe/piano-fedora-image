@@ -1,0 +1,10 @@
+--- a/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service
++++ b/packaging/piano-ubuntu-desktop/usr/lib/systemd/user/piano-speaker-rotation.service
+@@ -1,6 +1,6 @@
+ [Unit]
+ Description=Rotate stereo output across the tablet speakers
+-After=pipewire.service wireplumber.service
++After=pipewire.service wireplumber.service plasma-workspace.target
+ PartOf=graphical-session.target
+ 
+ [Service]

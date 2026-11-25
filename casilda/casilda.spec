@@ -2,9 +2,9 @@
 
 Name:           libcasilda-1.0
 Version:        1.4.0
-Release:        1.gunyahvm3%{?dist}
+Release:        2.gunyahvm3%{?dist}
 Summary:        Wayland compositor for GTK4
-License:        LGPL-2.1-only AND LGPL-2.1-or-later
+License:        LGPL-2.1-only
 URL:            https://gitlab.gnome.org/jpu/casilda
 ExclusiveArch:  aarch64
 Source0:        https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz#/casilda-1.4.0.tar.xz
@@ -86,6 +86,10 @@ install -Dm644 COPYING %{buildroot}%{_datadir}/doc/libcasilda-1.0-devel/copyrigh
 %{_datadir}/gir-1.0/Casilda-1.0.gir
 
 %changelog
+* Wed Nov 25 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-2.gunyahvm3
+- Correct the licence: every source file is LGPL-2.1-only and the upstream
+  README states version 2.1 only
+
 * Tue Nov 17 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.4.0-1.gunyahvm3
 - Build Casilda from source with its touch and output-scale fixes
 - Package headers, pkg-config metadata and GIR in libcasilda-1.0-devel

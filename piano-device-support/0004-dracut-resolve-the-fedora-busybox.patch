@@ -1,0 +1,14 @@
+--- a/packaging/piano-device-support/usr/lib/dracut/modules.d/99piano/module-setup.sh
++++ b/packaging/piano-device-support/usr/lib/dracut/modules.d/99piano/module-setup.sh
+@@ -9,7 +9,10 @@
+     # PID1 caches virtualization before ordinary dracut hooks run.
+     rm -f "$initdir/init"
+     inst_simple "$moddir/init" /init
+-    inst_simple /usr/libexec/piano/busybox
++    # Fedora ships BusyBox as a dynamic binary, so resolve its libraries too
++    # and keep the path the debug helpers use.
++    inst_binary /usr/bin/busybox
++    ln_r /usr/bin/busybox /usr/libexec/piano/busybox
+     inst_simple /usr/libexec/piano/usb-diag
+     inst_simple /etc/piano-network
+     mkdir -p "$initdir/usr/lib/systemd/system/sysinit.target.wants"

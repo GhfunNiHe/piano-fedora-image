@@ -45,6 +45,8 @@ env:
   AOSP_UNPACK_BOOTIMG_SHA256: 06b54dd9a07c5281778e29e234e76f6e3faee8bf0c904a5ef88fdee30eeed12e
   IIO_SENSOR_PROXY_SOURCE_URL: https://deb.debian.org/debian/pool/main/i/iio-sensor-proxy/iio-sensor-proxy_3.9.orig.tar.bz2
   IIO_SENSOR_PROXY_SOURCE_SHA256: 19a4ae99b1b8af603fc789841025f9747bf445418d69ec7389e75adb6c8186bf
+  AUDIOREACH_SOURCE_URL: https://codeload.github.com/linux-msm/audioreach-topology/tar.gz/2af1f1ebb8d4fd03b5f53891467ddde2e208a8a0
+  AUDIOREACH_SOURCE_SHA256: 20d75711af46e1d3354e912fdcb1193888d4201d133cac96cd3c11bc3863730f
   UPSTREAM_TAG: v1.6.3
   UPSTREAM_COMMIT: b43fc2b0c6402574ce7fc6ec064275165f7f5699
 
@@ -117,8 +119,12 @@ jobs:
           test "$(git -C "$source_tree" rev-parse HEAD)" = "$UPSTREAM_COMMIT"
           git -C "$source_tree" archive --format=tar.gz \
             --prefix=piano-source/ --output "$HOME/rpmbuild/SOURCES/piano-source-$UPSTREAM_TAG.tar.gz" \
-            "$UPSTREAM_TAG" device/boot device/camera device/sensors device/virtualization \
+            "$UPSTREAM_TAG" device/audio device/boot device/bluetooth device/camera \
+            device/charge-policy device/check device/piano-thp device/platform device/power \
+            device/sensors device/virtualization \
+            initramfs/network.json initramfs/usb-diag \
             packaging/piano-camerad packaging/piano-device-support \
+            packaging/piano-ubuntu-desktop \
             packaging/piano-iio-sensor-proxy packaging/piano-sensors \
             packaging/piano-crosvm packaging/piano-vm \
             firmware/README.md firmware/sensors tools/piano-camera-test.py \
@@ -126,6 +132,18 @@ jobs:
             docs/VIRTUALIZATION.zh-CN.md \
             tools/build-persistent-boot.py tools/initramfs_archive.py \
             LICENSE NOTICE LICENSES
+          # The firmware package stages its own subset: the blob tree is 53 MB and
+          # must not end up in every other SRPM.
+          git -C "$source_tree" archive --format=tar.gz \
+            --prefix=piano-firmware/ \
+            --output "$HOME/rpmbuild/SOURCES/piano-firmware-$UPSTREAM_TAG.tar.gz" \
+            "$UPSTREAM_TAG" firmware device/audio tools/firmware_payload.py \
+            LICENSE NOTICE LICENSES
+          curl --fail --location --retry 3 \
+            --output "$HOME/rpmbuild/SOURCES/audioreach-topology-2af1f1eb.tar.gz" \
+            "$AUDIOREACH_SOURCE_URL"
+          echo "$AUDIOREACH_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/audioreach-topology-2af1f1eb.tar.gz" |
+            sha256sum -c -
           "$source_tree/tools/fetch-aosp-avb.sh"
           aosp_tree="$RUNNER_TEMP/aosp-mkbootimg"
           git clone --quiet --filter=blob:none --no-checkout \
@@ -224,8 +242,6 @@ jobs:
 
           index_path, destination, source_dir, base_url = sys.argv[1:]
           wanted = {
-              "piano-device-support": "piano-device-support.deb",
-              "piano-local-firmware": "xiaomi-piano-firmware.deb",
               "piano-vm-windows": "piano-vm-windows.deb",
               "gunyahvm": "gunyahvm.deb",
           }
@@ -326,29 +342,25 @@ jobs:
             install -m0644 "$patchfile" \
               "$HOME/rpmbuild/SOURCES/piano-vm-${patchfile##*/}"
           done
-          install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro.conf \
-            "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro.conf"
-          install -m0644 piano-device-support/audio/Xiaomi-Pad-8-Pro-HiFi.conf \
-            "$HOME/rpmbuild/SOURCES/Xiaomi-Pad-8-Pro-HiFi.conf"
-          install -m0644 piano-device-support/audio/Piano-Capture-Diag.conf \
-            "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag.conf"
-          install -m0644 piano-device-support/audio/Piano-Capture-Diag-HiFi.conf \
-            "$HOME/rpmbuild/SOURCES/Piano-Capture-Diag-HiFi.conf"
-          install -m0644 piano-device-support/audio/50-piano-speaker-upmix.conf \
-            "$HOME/rpmbuild/SOURCES/50-piano-speaker-upmix.conf"
-          install -m0644 piano-device-support/build-touch.py \
-            "$HOME/rpmbuild/SOURCES/build-touch.py"
-          install -m0644 piano-device-support/pen-button-compat.patch \
-            "$HOME/rpmbuild/SOURCES/pen-button-compat.patch"
-          install -m0644 piano-device-support/pen-m80p-position-gap.patch \
-            "$HOME/rpmbuild/SOURCES/pen-m80p-position-gap.patch"
-          install -m0644 piano-device-support/pen-docked-bond-recovery.patch \
-            "$HOME/rpmbuild/SOURCES/pen-docked-bond-recovery.patch"
+          install -m0644 piano-device-support/0*.patch \
+            "$HOME/rpmbuild/SOURCES/"
+          install -m0644 piano-device-support/thp/piano-csot-thp-calibration.json \
+            "$HOME/rpmbuild/SOURCES/piano-csot-thp-calibration.json"
+          install -m0644 piano-device-support/thp/piano-boe-thp-calibration.json \
+            "$HOME/rpmbuild/SOURCES/piano-boe-thp-calibration.json"
+          install -m0755 piano-device-support/thp/piano-thp-calibration \
+            "$HOME/rpmbuild/SOURCES/piano-thp-calibration"
+          install -m0644 piano-device-support/thp/10-piano-thp-calibration.conf \
+            "$HOME/rpmbuild/SOURCES/10-piano-thp-calibration.conf"
           install -m0644 piano-device-support/audio/speaker-rotation/* "$HOME/rpmbuild/SOURCES/"
-          install -m0644 piano-device-support/power/*.conf "$HOME/rpmbuild/SOURCES/"
-          tar --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner \
-            -cf "$HOME/rpmbuild/SOURCES/piano-touch-source.tar" \
-            -C piano-device-support/touch-source .
+      - name: Check the upstream tag in the specs
+        run: |
+          set -euxo pipefail
+          for spec in $(grep -lE 'piano-(source|firmware)-%\{upstream_tag\}' */*.spec); do
+            grep -qxF "%global upstream_tag $UPSTREAM_TAG" "$spec" ||
+              { echo "$spec does not pin %global upstream_tag $UPSTREAM_TAG"; exit 1; }
+          done
+
       - name: Install RPM build dependencies
         run: |
           set -euxo pipefail

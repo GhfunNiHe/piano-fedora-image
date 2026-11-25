@@ -1,22 +1,24 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 %global crosvm_commit 96e84c3f680e34e82e932ef911ae97d734121758
 %global crosvm_src crosvm-%{crosvm_commit}
+%global minijail_commit 7845d89927a82dbdcdee6276837cd0978f69ba19
 %global crosvm_vendor_dir %{_builddir}/cargo-vendor
 %global crosvm_target_dir %{_builddir}/crosvm-target
 
 Name:           piano-vm
 Version:        1.0.0
-Release:        2%{?dist}
+Release:        3%{?dist}
 Summary:        Piano virtual machine management tools and Gunyah crosvm runtime
-License:        MIT AND GPL-2.0-or-later AND BSD-3-Clause AND Apache-2.0
+License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
 
-Source0:        crosvm-96e84c3.tar.gz
-Source1:        minijail-7845d899.tar.gz
+Source0:        https://codeload.github.com/google/crosvm/tar.gz/%{crosvm_commit}#/crosvm-96e84c3.tar.gz
+Source1:        https://codeload.github.com/google/minijail/tar.gz/%{minijail_commit}#/minijail-7845d899.tar.gz
 Source2:        crosvm-vendor.tar.gz
 Source3:        piano-vm-windows.deb
-Source4:        piano-source-v1.6.3.tar.gz
+Source4:        piano-source-%{upstream_tag}.tar.gz
 
 Patch0001:      piano-vm-0001-gunyah-runtime-GuestAccept-blob-sharing-for-protecte.patch
 Patch0002:      piano-vm-0002-gpu-iceland-gvm-scanout-copy-path-by-default-window-.patch
@@ -255,6 +257,11 @@ fi
 %{_datadir}/piano/vm/windows
 
 %changelog
+* Wed Nov 25 2026 Piano RPM template <noreply@localhost> - 1.0.0-3
+- Correct the licence of the main package: piano-vm, guest-control.py and
+  piano-vm-net are GPL-2.0-only, windows_vm.py, vm-image.py, the tmpfiles
+  entry and the polkit policy are MIT; crosvm licences stay on piano-crosvm
+
 * Tue Nov 17 2026 Piano RPM template <noreply@localhost> - 1.0.0-2
 - Build crosvm from the locked upstream commit with vendored crates
 - Install piano-vm directly from the upstream v1.5.0 Python source

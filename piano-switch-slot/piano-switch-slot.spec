@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           piano-switch-slot
 Version:        1.5.0
@@ -7,7 +8,7 @@ Summary:        Piano local boot image hook and A/B slot switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 BuildArch:      noarch
-Source0:        piano-source-v1.6.3.tar.gz
+Source0:        piano-source-%{upstream_tag}.tar.gz
 Source1:        zz-piano-boot
 Source2:        piano-local-update
 Source3:        zz-piano-boot-postrm

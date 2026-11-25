@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           iio-sensor-proxy-ssc
 Version:        3.9+piano20261112.1
@@ -7,8 +8,8 @@ Summary:        IIO sensor proxy with Qualcomm SSC support
 License:        GPL-3.0-or-later
 URL:            https://gitlab.freedesktop.org/hadess/iio-sensor-proxy
 ExclusiveArch:  aarch64
-Source0:        iio-sensor-proxy-3.9.tar.bz2
-Source1:        piano-source-v1.6.3.tar.gz
+Source0:        https://deb.debian.org/debian/pool/main/i/iio-sensor-proxy/iio-sensor-proxy_3.9.orig.tar.bz2#/iio-sensor-proxy-3.9.tar.bz2
+Source1:        piano-source-%{upstream_tag}.tar.gz
 Patch0000:      0003-iio-sensor-proxy-start-preclaimed-coldplug-sensor.patch
 Patch0001:      0004-iio-sensor-proxy-serialize-ssc-accel-polling.patch
 Patch0002:      0005-iio-sensor-proxy-cancel-released-pending-claims.patch

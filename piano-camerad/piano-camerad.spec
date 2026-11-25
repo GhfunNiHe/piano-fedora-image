@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           piano-camerad
 Version:        0.1+20261113.2
@@ -7,7 +8,7 @@ Summary:        Piano camera capture daemon and WirePlumber integration
 License:        MIT
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 ExclusiveArch:  aarch64
-Source0:        piano-source-v1.6.3.tar.gz
+Source0:        piano-source-%{upstream_tag}.tar.gz
 Patch0001:      0001-camera-disable-stale-rdi-links.patch
 BuildRequires:  gcc
 BuildRequires:  systemd-rpm-macros

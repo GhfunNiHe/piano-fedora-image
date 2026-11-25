@@ -14,7 +14,7 @@ Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
 Release:        8.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
-License:        GPL-2.0-only WITH Linux-syscall-note
+License:        ((GPL-2.0-only WITH Linux-syscall-note) OR CDDL-1.0) AND ((GPL-2.0-only WITH Linux-syscall-note) OR Linux-OpenIB) AND 0BSD AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSD-3-Clause-Clear AND CC0-1.0 AND GFDL-1.1-no-invariants-or-later AND GPL-1.0-or-later AND (GPL-1.0-or-later WITH Linux-syscall-note) AND GPL-2.0-only AND (GPL-2.0-only OR CDDL-1.0) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-only) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-or-later) AND (GPL-2.0-only WITH Linux-syscall-note) AND GPL-2.0-or-later AND (GPL-2.0-or-later OR CC-BY-4.0) AND (GPL-2.0-or-later WITH GCC-exception-2.0) AND (GPL-2.0-or-later WITH Linux-syscall-note) AND ISC AND LGPL-2.0-or-later AND (LGPL-2.0-or-later WITH Linux-syscall-note) AND LGPL-2.1-only AND (LGPL-2.1-only WITH Linux-syscall-note) AND LGPL-2.1-or-later AND (LGPL-2.1-or-later WITH Linux-syscall-note) AND (Linux-OpenIB OR GPL-2.0-only) AND (Linux-OpenIB OR GPL-2.0-only OR BSD-2-Clause) AND Linux-man-pages-copyleft AND MIT AND (MPL-1.1 OR GPL-2.0-only) AND (X11 OR GPL-2.0-only) AND (X11 OR GPL-2.0-or-later) AND Zlib AND (copyleft-next-0.3.1 OR GPL-2.0-or-later)
 URL:            %{kernel_url}
 ExclusiveArch:  aarch64
 
@@ -29,7 +29,6 @@ Source6:        prepare-boot-dtb.py
 Source7:        https://github.com/v4l2loopback/v4l2loopback/archive/v0.15.4.tar.gz#/v4l2loopback-0.15.4.tar.gz
 Patch0001:      0001-xiaomi-mca-retry-mipps-in-dfp.patch
 Patch0002:      0002-asoc-reset-runtime-component-count.patch
-Patch0003:      0003-nt36532e-thp-add-fedora-proc-compat.patch
 Patch0004:      0004-ath12k-piano-warm-restart-reset.patch
 
 BuildRequires:  bc bison clang ccache diffutils elfutils-devel findutils flex

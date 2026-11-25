@@ -1,0 +1,28 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Fedora adaptation: upstream piano-thp-live takes one calibration file, which
+# upstream generates per unit from that unit's factory configuration. Fedora
+# ships the two public panel calibrations instead, so this wrapper selects the
+# one the kernel reports and keeps the upstream per-unit file authoritative.
+set -eu
+
+touch_node=${1:-/dev/piano-touch}
+unit_calibration=/etc/piano/thp-calibration.json
+shipped=/usr/share/piano/thp
+
+if [ -r "$unit_calibration" ]; then
+    exec /usr/libexec/piano/piano-thp-live "$unit_calibration" "$touch_node"
+fi
+
+vendor=$(cat /sys/class/misc/nvt-thp-*/device/panel_vendor 2>/dev/null | head -n 1) || vendor=
+case "$vendor" in
+    csot|boe) ;;
+    *)
+        # Keep touch input alive: the CSOT module is the one the reference unit
+        # carries, and the driver logs a THP calibration error if it differs.
+        echo "piano-thp: panel vendor '${vendor}' unknown; using the CSOT calibration" >&2
+        vendor=csot
+        ;;
+esac
+
+exec /usr/libexec/piano/piano-thp-live "$shipped/piano-$vendor.json" "$touch_node"

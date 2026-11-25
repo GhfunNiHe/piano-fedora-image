@@ -1,4 +1,5 @@
 %global debug_package %{nil}
+%global upstream_tag v1.6.3
 
 Name:           piano-switch-boot
 Version:        1.5.0
@@ -7,7 +8,7 @@ Summary:        Piano upstream boot image sets and system switch
 License:        MIT AND GPL-2.0-only
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 BuildArch:      noarch
-Source0:        piano-source-v1.6.3.tar.gz
+Source0:        piano-source-%{upstream_tag}.tar.gz
 Source1:        aosp-mkbootimg.tar.gz
 Source2:        avbtool.py
 Source3:        fedora-boot-compat.patch
