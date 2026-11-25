@@ -10,10 +10,6 @@ touch_node=${1:-/dev/piano-touch}
 unit_calibration=/etc/piano/thp-calibration.json
 shipped=/usr/share/piano/thp
 
-if [ -r "$unit_calibration" ]; then
-    exec /usr/libexec/piano/piano-thp-live "$unit_calibration" "$touch_node"
-fi
-
 vendor=$(cat /sys/class/misc/nvt-thp-*/device/panel_vendor 2>/dev/null | head -n 1) || vendor=
 case "$vendor" in
     csot|boe) ;;
@@ -24,5 +20,53 @@ case "$vendor" in
         vendor=csot
         ;;
 esac
+shipped_calibration=$shipped/piano-$vendor.json
 
-exec /usr/libexec/piano/piano-thp-live "$shipped/piano-$vendor.json" "$touch_node"
+if [ ! -r "$unit_calibration" ]; then
+    exec /usr/libexec/piano/piano-thp-live "$shipped_calibration" "$touch_node"
+fi
+
+# ready: the per-unit file has both the finger and the pen profiles.
+# merge: it predates pen support, so the pen profiles have to be borrowed; the
+#        reader ignores the pen without a word when they are missing.
+# broken: it is not a usable calibration at all.
+mode=$(python3 -c 'import json, sys
+try:
+    doc = json.load(open(sys.argv[1]))
+except Exception:
+    print("broken")
+    sys.exit(0)
+if "calibration" not in doc:
+    print("broken")
+elif "pen" in doc:
+    print("ready")
+else:
+    print("merge")' "$unit_calibration" 2>/dev/null) || mode=broken
+
+if [ "$mode" = ready ]; then
+    exec /usr/libexec/piano/piano-thp-live "$unit_calibration" "$touch_node"
+fi
+
+if [ "$mode" = merge ]; then
+    merged=/run/piano/thp-calibration.json
+    mkdir -p /run/piano
+    if python3 - "$unit_calibration" "$shipped_calibration" "$merged" <<'PY'
+import json
+import sys
+
+unit_path, shipped_path, out_path = sys.argv[1:4]
+unit = json.load(open(unit_path))
+shipped = json.load(open(shipped_path))
+for key in ("pen", "m80p"):
+    if key in shipped:
+        unit[key] = shipped[key]
+open(out_path, "w").write(json.dumps(unit) + "\n")
+PY
+    then
+        echo "piano-thp: $unit_calibration has no pen profiles; merged the shipped ones into $merged" >&2
+        exec /usr/libexec/piano/piano-thp-live "$merged" "$touch_node"
+    fi
+fi
+
+echo "piano-thp: $unit_calibration is unusable; using $shipped_calibration" >&2
+exec /usr/libexec/piano/piano-thp-live "$shipped_calibration" "$touch_node"

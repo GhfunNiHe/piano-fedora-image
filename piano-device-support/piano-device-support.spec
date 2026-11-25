@@ -3,7 +3,7 @@
 
 Name:           piano-device-support
 Version:        1.6.3
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        Piano platform, touchscreen and user-space device support
 License:        MIT AND BSD-3-Clause AND BSD-2-Clause-Patent AND GPL-2.0-only AND Apache-2.0
 URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
@@ -238,6 +238,12 @@ if command -v udevadm >/dev/null 2>&1; then
 fi
 
 %changelog
+* Wed Nov 25 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.3-2
+- Keep the pen working when /etc/piano/thp-calibration.json was extracted
+  before pen support: the reader ignores a file without pen profiles without
+  a word, so merge the shipped profiles into a temporary copy and fall back
+  to the shipped calibration when the per-unit file is unusable
+
 * Wed Nov 25 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.3-1
 - Build the package from the upstream source tag instead of converting the
   Ubuntu payload; every file now comes from the tree except the Fedora confs
