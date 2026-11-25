@@ -13,7 +13,8 @@ URL:            https://github.com/yzddmr6/xiaomipad-8pro-mainline
 BuildArch:      noarch
 Source0:        piano-firmware-%{upstream_tag}.tar.gz
 Source1:        https://github.com/linux-msm/audioreach-topology/archive/%{audioreach_commit}.tar.gz#/audioreach-topology-2af1f1eb.tar.gz
-BuildRequires:  alsa-utils
+# alsatplg lives in alsa-topology-utils, not in alsa-utils.
+BuildRequires:  alsa-topology-utils
 BuildRequires:  m4
 BuildRequires:  python3
 Provides:       piano-local-firmware = %{version}-%{release}
