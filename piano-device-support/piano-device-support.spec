@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 
 Name:           piano-device-support
 Version:        1.6.3

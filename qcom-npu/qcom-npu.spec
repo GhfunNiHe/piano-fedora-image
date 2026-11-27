@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 
 # These are linker-only capabilities incorrectly inferred from bundled DSP ELF files.
 %global __requires_exclude ^(libc[.]so|libgcc[.]so)$

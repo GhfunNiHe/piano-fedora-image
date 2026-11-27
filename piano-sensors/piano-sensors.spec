@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 
 Name:           piano-sensors
 Version:        0.1+20261112.1

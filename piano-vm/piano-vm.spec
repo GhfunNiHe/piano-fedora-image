@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 %global crosvm_commit 96e84c3f680e34e82e932ef911ae97d734121758
 %global crosvm_src crosvm-%{crosvm_commit}
 %global minijail_commit 7845d89927a82dbdcdee6276837cd0978f69ba19

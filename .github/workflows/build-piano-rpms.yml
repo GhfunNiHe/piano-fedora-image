@@ -19,12 +19,12 @@ permissions:
 
 env:
   APT_REPO_URL: https://github.com/yzddmr6/xiaomipad-8pro-mainline/releases/download/apt
-  APT_INRELEASE_SHA256: 9de176c4aefb3c536cb0dc67f45bb8d84f8ff8af418363897d2223995fae5653
-  APT_PACKAGES_SHA256: a5bae3d33f82b83eb24af4483d29aee317757c3932cd3e383a77a03fe6e2c7f3
+  APT_INRELEASE_SHA256: 78d32fcbd45a0d740dff9503520e175da8579efd088b4afb4a406e80d77b7842
+  APT_PACKAGES_SHA256: 6e6b316211cea13c48b38df7ce121a33ff3da0bf976b47da580161d559c75851
   APT_KEYRING_URL: https://raw.githubusercontent.com/yzddmr6/xiaomipad-8pro-mainline/aa4095a02c8455dfabc3dc42a8bacdb11bacab6b/packaging/piano-archive-keyring/usr/share/keyrings/piano-archive-keyring.gpg
   APT_KEYRING_SHA256: d93e9b82ac560fb4ae7d64286e1f5ca70da754f0e5cab275398a34aba683e4b9
-  GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.5.1/gunyahvm-1.5.1-source.tar.zst
-  GUNYAHVM_SOURCE_SHA256: dfba234792a68b574b45ba9a0bb7240aa2ecd5391fda5f9cd943da9d9c9914df
+  GUNYAHVM_SOURCE_URL: https://github.com/yzddmr6/GunyahVM/releases/download/v1.6.0/gunyahvm-1.6.0-source.tar.zst
+  GUNYAHVM_SOURCE_SHA256: 355c3e962d60681e8cbce52250330383a6df320d04aae17384acdaea6c620571
   GUNYAHVM_LIBJPEG_TURBO8_URL: https://ports.ubuntu.com/ubuntu-ports/pool/main/libj/libjpeg-turbo/libjpeg-turbo8_2.1.5-4ubuntu4_arm64.deb
   GUNYAHVM_LIBJPEG_TURBO8_SHA256: cd6cac6155d81d8d2e4a53693a7c91b42b26d1e84d018792d319c24cddaaf9d8
   CASILDA_SOURCE_URL: https://archive.ubuntu.com/ubuntu/pool/universe/c/casilda/casilda_1.4.0.orig.tar.xz
@@ -47,8 +47,8 @@ env:
   IIO_SENSOR_PROXY_SOURCE_SHA256: 19a4ae99b1b8af603fc789841025f9747bf445418d69ec7389e75adb6c8186bf
   AUDIOREACH_SOURCE_URL: https://codeload.github.com/linux-msm/audioreach-topology/tar.gz/2af1f1ebb8d4fd03b5f53891467ddde2e208a8a0
   AUDIOREACH_SOURCE_SHA256: 20d75711af46e1d3354e912fdcb1193888d4201d133cac96cd3c11bc3863730f
-  UPSTREAM_TAG: v1.6.3
-  UPSTREAM_COMMIT: b43fc2b0c6402574ce7fc6ec064275165f7f5699
+  UPSTREAM_TAG: v1.6.4
+  UPSTREAM_COMMIT: 71d66850799cc94d9b1d9f6ea683e86884841b26
 
 jobs:
   build:
@@ -276,9 +276,9 @@ jobs:
               print(f"Verified {name} {entry['Version']} ({entry['Architecture']}) -> {source_name}")
           PY
           curl --fail --location --retry 3 \
-            --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.5.1-source.tar.zst" \
+            --output "$HOME/rpmbuild/SOURCES/gunyahvm-1.6.0-source.tar.zst" \
             "$GUNYAHVM_SOURCE_URL"
-          echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.5.1-source.tar.zst" |
+          echo "$GUNYAHVM_SOURCE_SHA256  $HOME/rpmbuild/SOURCES/gunyahvm-1.6.0-source.tar.zst" |
             sha256sum -c -
           curl --fail --location --retry 3 \
             --output "$HOME/rpmbuild/SOURCES/libjpeg-turbo8_2.1.5-4ubuntu4_arm64.deb" \

@@ -1,5 +1,5 @@
 %global debug_package %{nil}
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 
 Name:           iio-sensor-proxy-ssc
 Version:        3.9+piano20261112.1

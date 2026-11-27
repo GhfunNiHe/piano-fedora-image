@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 %global __strip /bin/true
 %global _firmwaredir %{_prefix}/lib/firmware
-%global upstream_tag v1.6.3
+%global upstream_tag v1.6.4
 %global audioreach_commit 2af1f1ebb8d4fd03b5f53891467ddde2e208a8a0
 
 Name:           firmware-xiaomi-piano

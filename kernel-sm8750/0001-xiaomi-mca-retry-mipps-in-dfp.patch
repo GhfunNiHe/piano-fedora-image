@@ -1,6 +1,6 @@
 Subject: power: supply: Xiaomi MCA: retry MiPPS discovery in DFP
 
-Source-commit: b5100d5f2e0bb80e1191d521a48596674608eb3d
+Source-commit: 51d28211803b96101b444a762da201166cac8187
 
 diff --git a/drivers/power/supply/xiaomi_mca.c b/drivers/power/supply/xiaomi_mca.c
 index 3894242..46399e0 100644

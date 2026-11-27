@@ -4,15 +4,15 @@
 %global kernel_url https://github.com/yzddmr6/linux-sm8750
 %global KERNEL_VER 7.4.0-rc2
 %global KERNEL_RPM_VER 7.4.0~rc2
-%global KERNEL_COMMIT b5100d5f2e0bb80e1191d521a48596674608eb3d
-%global KERNEL_SHORT b5100d5
+%global KERNEL_COMMIT 51d28211803b96101b444a762da201166cac8187
+%global KERNEL_SHORT 51d2821
 %global KERNEL_RELEASE %{KERNEL_VER}-sm8750-g%{KERNEL_SHORT}
 %global KERNEL_LOCALVERSION -sm8750-g%{KERNEL_SHORT}
 %global PIANO_KCFLAGS -O3 -march=armv8.7-a -mtune=oryon-1 -mno-outline-atomics
 
 Name:           kernel-sm8750
 Version:        %{KERNEL_RPM_VER}
-Release:        8.piano%{?dist}
+Release:        9.piano%{?dist}
 Summary:        Mainline Linux kernel for Xiaomi Pad 8 Pro (SM8750)
 License:        ((GPL-2.0-only WITH Linux-syscall-note) OR CDDL-1.0) AND ((GPL-2.0-only WITH Linux-syscall-note) OR Linux-OpenIB) AND 0BSD AND Apache-2.0 AND BSD-2-Clause AND BSD-3-Clause AND BSD-3-Clause-Clear AND CC0-1.0 AND GFDL-1.1-no-invariants-or-later AND GPL-1.0-or-later AND (GPL-1.0-or-later WITH Linux-syscall-note) AND GPL-2.0-only AND (GPL-2.0-only OR CDDL-1.0) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-only) AND (GPL-2.0-only OR GFDL-1.2-no-invariants-or-later) AND (GPL-2.0-only WITH Linux-syscall-note) AND GPL-2.0-or-later AND (GPL-2.0-or-later OR CC-BY-4.0) AND (GPL-2.0-or-later WITH GCC-exception-2.0) AND (GPL-2.0-or-later WITH Linux-syscall-note) AND ISC AND LGPL-2.0-or-later AND (LGPL-2.0-or-later WITH Linux-syscall-note) AND LGPL-2.1-only AND (LGPL-2.1-only WITH Linux-syscall-note) AND LGPL-2.1-or-later AND (LGPL-2.1-or-later WITH Linux-syscall-note) AND (Linux-OpenIB OR GPL-2.0-only) AND (Linux-OpenIB OR GPL-2.0-only OR BSD-2-Clause) AND Linux-man-pages-copyleft AND MIT AND (MPL-1.1 OR GPL-2.0-only) AND (X11 OR GPL-2.0-only) AND (X11 OR GPL-2.0-or-later) AND Zlib AND (copyleft-next-0.3.1 OR GPL-2.0-or-later)
 URL:            %{kernel_url}
@@ -46,7 +46,7 @@ Provides:       kmod(v4l2loopback)
 Requires:       dracut kmod qbootctl
 
 %description
-The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.3 source commit. It
+The Linux 7.4.0-rc2 SM8750 piano kernel from the v1.6.4 source commit. It
 starts from the config in the compiled upstream kernel package and applies
 the requested ThinLTO, built-in NTSYNC, built-in F2FS and multipath routing
 settings. The package assembles the piano boot DTB from the freshly
@@ -156,6 +156,11 @@ if [ "$1" -eq 0 ] && [ -d /run/systemd/system ] &&
 fi
 
 %changelog
+* Fri Nov 27 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-9.piano
+- Follow the v1.6.4 kernel commit from the linux-sm8750 main branch
+- Refresh the base config from the published piano109 linux-image package
+- Pick up the upstream Type-C alt-mode, DWC3 and PHY recovery fixes
+
 * Mon Nov 23 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 7.4.0~rc2-8.piano
 - Follow the v1.6.3 kernel commit from the linux-sm8750 main branch
 - Refresh the base config from the published piano105 linux-image package

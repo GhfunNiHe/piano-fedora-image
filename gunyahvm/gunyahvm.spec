@@ -3,7 +3,7 @@
 %global __requires_exclude ^libvirglrenderer\\.so\\.1
 
 Name:           gunyahvm
-Version:        1.5.1
+Version:        1.6.0
 Release:        1%{?dist}
 Summary:        Linux, Windows and macOS virtual machines on Qualcomm Gunyah
 License:        GPL-2.0-only AND MIT AND BSD-2-Clause-Patent AND Apache-2.0
@@ -266,6 +266,9 @@ for process in Path('/proc').glob('[0-9]*'):
 PY
 
 %changelog
+* Fri Nov 27 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.6.0-1
+- Update GunyahVM to 1.6.0 from the pinned upstream source release
+
 * Sun Nov 22 2026 GhfunNiHe <131235947+GhfunNiHe@users.noreply.github.com> - 1.5.1-1
 - Fix fragmented boot memory, Windows device slots, guest SSH keys and display shortcuts
 
