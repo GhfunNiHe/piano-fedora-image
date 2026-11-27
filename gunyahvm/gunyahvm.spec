@@ -208,7 +208,6 @@ done
 %{_prefix}/lib/gunyahvm/python
 %{_prefix}/lib/gunyahvm/renderer
 %{_libexecdir}/gunyahvm
-%{_prefix}/lib/systemd/logind.conf.d/zz-gunyahvm.conf
 %{_sysusersdir}/gunyahvm.conf
 %{_tmpfilesdir}/gunyahvm-memory.conf
 %{_udevrulesdir}/73-gunyahvm.rules
@@ -234,17 +233,11 @@ if command -v gtk-update-icon-cache >/dev/null 2>&1; then
     gtk-update-icon-cache -q -t -f %{_datadir}/icons/hicolor || :
 fi
 if [ -d /run/systemd/system ]; then
-    systemctl reload systemd-logind.service >/dev/null 2>&1 || :
     if command -v udevadm >/dev/null 2>&1; then
         udevadm control --reload-rules || :
         udevadm trigger --subsystem-match=misc --sysname-match=gunyah || :
     fi
     systemd-tmpfiles --create %{_tmpfilesdir}/gunyahvm-memory.conf || :
-fi
-
-%postun
-if [ -d /run/systemd/system ]; then
-    systemctl reload systemd-logind.service >/dev/null 2>&1 || :
 fi
 
 %preun
