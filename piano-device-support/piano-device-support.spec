@@ -36,7 +36,7 @@ Requires:       pipewire-utils
 Requires:       tuned-ppd
 Requires:       kmod pam polkit systemd systemd-udev util-linux coreutils iproute
 Requires:       alsa-ucm dracut dtc gawk openssl
-Requires:       xiaomi-piano-firmware >= 0.7+os3.0.303.0
+Requires:       firmware-xiaomi-piano >= 0.7+os3.0.303.0
 Recommends:     openssh-server
 Obsoletes:      xiaomi-mipps-auth < 1.1.1-5
 

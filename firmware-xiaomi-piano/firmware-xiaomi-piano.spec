@@ -4,7 +4,7 @@
 %global upstream_tag v1.6.3
 %global audioreach_commit 2af1f1ebb8d4fd03b5f53891467ddde2e208a8a0
 
-Name:           xiaomi-piano-firmware
+Name:           firmware-xiaomi-piano
 Version:        0.7+os3.0.303.0
 Release:        3%{?dist}
 Summary:        Firmware for Xiaomi Pad 8 Pro (piano)
@@ -17,6 +17,8 @@ Source1:        https://github.com/linux-msm/audioreach-topology/archive/%{audio
 BuildRequires:  alsa-topology-utils
 BuildRequires:  m4
 BuildRequires:  python3
+Provides:       xiaomi-piano-firmware = %{version}-%{release}
+Obsoletes:      xiaomi-piano-firmware <= %{version}-%{release}
 Provides:       piano-local-firmware = %{version}-%{release}
 Obsoletes:      piano-local-firmware <= %{version}-%{release}
 

@@ -7,7 +7,7 @@ on:
       - "piano-*/**"
       - "gunyahvm-*/**"
       - "iio-sensor-proxy-ssc/**"
-      - "xiaomi-piano-firmware/**"
+      - "firmware-xiaomi-piano/**"
       - "gunyahvm/**"
       - "casilda/**"
       - "qualcomm-iris-vaapi/**"
@@ -365,7 +365,7 @@ jobs:
         run: |
           set -euxo pipefail
           for spec in \
-            xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
+            firmware-xiaomi-piano/firmware-xiaomi-piano.spec \
             qualcomm-iris-vaapi/qualcomm-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
@@ -386,7 +386,7 @@ jobs:
         run: |
           set -euxo pipefail
           for spec in \
-            xiaomi-piano-firmware/xiaomi-piano-firmware.spec \
+            firmware-xiaomi-piano/firmware-xiaomi-piano.spec \
             qualcomm-iris-vaapi/qualcomm-iris-vaapi.spec \
             iio-sensor-proxy-ssc/iio-sensor-proxy-ssc.spec \
             piano-sensors/piano-sensors.spec \
