@@ -70,6 +70,7 @@ jobs:
             cargo ccache cpio curl dpkg dnf-plugins-core git gnupg2-verify gzip patch patchelf \
             rpm-build rpmdevtools rust \
             sccache systemd-rpm-macros tar unzip
+          dnf upgrade -y zstd libzstd
           dnf install -y --nogpgcheck \
             --repofrompath 'terra,https://repos.fyralabs.com/terra$releasever' \
             terra-release
@@ -450,6 +451,7 @@ jobs:
           dnf install -y \
             ccache cpio curl dpkg dnf-plugins-core git gzip patch \
             rpm-build rpmdevtools systemd-rpm-macros tar unzip
+          dnf upgrade -y zstd libzstd
           rpmdev-setuptree
           mkdir -p "$HOME/rpmbuild/tmp"
           mkdir -p "$HOME/.cache/ccache" "$HOME/npu-inputs"
